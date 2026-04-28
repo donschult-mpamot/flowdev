@@ -31,6 +31,9 @@ Thumbs.db
 !.vscode/settings.json
 .idea/
 
+# Claude Code
+.claude/settings.local.json
+
 # Prisma generated artifacts (regenerated on demand)
 packages/db/src/generated/
 
