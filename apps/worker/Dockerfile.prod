@@ -1,0 +1,40 @@
+# Stage 1 — install + build
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+RUN apk add --no-cache libc6-compat openssl
+
+COPY package.json package-lock.json ./
+COPY apps/web/package.json apps/web/package.json
+COPY apps/worker/package.json apps/worker/package.json
+COPY apps/jobs/package.json apps/jobs/package.json
+COPY packages/connectors/package.json packages/connectors/package.json
+COPY packages/db/package.json packages/db/package.json
+COPY packages/shared/package.json packages/shared/package.json
+
+RUN npm ci
+
+COPY . .
+
+RUN npm run db:generate --workspace=packages/db
+RUN npm run build --workspace=apps/worker
+
+# Stage 2 — runtime
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+RUN apk add --no-cache libc6-compat openssl \
+ && addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 worker
+
+# Copy node_modules + the worker's compiled output + workspace packages it imports.
+COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=worker:nodejs /app/apps/worker/dist ./apps/worker/dist
+COPY --from=builder --chown=worker:nodejs /app/apps/worker/package.json ./apps/worker/package.json
+COPY --from=builder --chown=worker:nodejs /app/packages ./packages
+
+USER worker
+
+CMD ["node", "apps/worker/dist/index.js"]

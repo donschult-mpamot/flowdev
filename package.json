@@ -1,0 +1,31 @@
+{
+  "name": "flowdev",
+  "private": true,
+  "version": "0.0.1",
+  "description": "FlowDev (codename MPAMOT) — internal multi-platform application monitoring & operations tool",
+  "packageManager": "npm@10.9.0",
+  "engines": {
+    "node": "20.x",
+    "npm": "10.x"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:generate": "npm run db:generate --workspace=packages/db",
+    "db:push": "npm run db:push --workspace=packages/db",
+    "db:studio": "npm run db:studio --workspace=packages/db"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.0"
+  }
+}
