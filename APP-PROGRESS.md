@@ -3,7 +3,7 @@
 **Project:** FlowDev (codename **MPAMOT** — Multi-Platform Application Monitoring & Operations Tool)
 **Owner:** Don
 **Methodology:** BMAD (Phase-driven planning → implementation)
-**Last updated:** 2026-04-28 (Story 1.1 implementation complete — status review)
+**Last updated:** 2026-04-28 EOD (Story 1.1 PR #1 open as draft, CI running; resume tomorrow)
 
 > Single source of truth for project status across Claude Code sessions. Read this first when resuming work in a new session, then act on the **Next step** in §Current state.
 
@@ -11,16 +11,27 @@
 
 ## Current state
 
-**Phase:** 4 — Implementation, **Story 1.1 status `review`** (scaffold committed locally on `feat/story-1-1-bootstrap`, not yet pushed)
-**Next step (required):** `[CR]` Code Review — `bmad-code-review` — adversarial review of Story 1.1's implementation. Run in a **fresh session with a different LLM** for best results.
-**After 1.1 review passes:** `[CS]` Story 1.7 (audit log infrastructure — runs alongside 1.1 per Sprint-planning note 1) → `[DS]` → `[CR]`, then 1.2 onward.
+**Phase:** 4 — Implementation, **Story 1.1 status `review`** — PR open as draft, CI running.
+
+**🟦 PR #1 (Story 1.1):** <https://github.com/donschult-mpamot/flowdev/pull/1>
+- Base: `main` (initial README-only seed commit `7e41274`)
+- Head: `feat/story-1-1-bootstrap` — two commits: `da55b8e` scaffold + `3291266` BMAD artifacts (post-rebase SHAs)
+- Status at EOD: draft, mergeable, CI `pending` on the `typecheck / lint / test / build` job
+
+**Next step when you resume:**
+1. **Check CI result on PR #1.** `"/c/Program Files/GitHub CLI/gh.exe" pr checks 1` from `C:\Dev\flowdev`. If green → step 2. If red → fix forward, push, re-check.
+2. **`[CR]` Code Review** — `bmad-code-review` against PR #1, in a **fresh session with a different LLM** than Opus 4.7 (Sonnet 4.6 or Opus 4.6 ideally — different blind spots). Review surface = the diff in PR #1.
+3. **CR passes / fixes applied → mark PR ready (un-draft) → merge to `main`.** Use **Squash and merge** or **Rebase and merge**; both preserve `main`'s initial commit.
+4. **`[CS]` Story 1.7** (audit log infrastructure — sequenced alongside 1.1 per §Sprint-planning notes item 1) → `[DS]` → `[CR]`.
+5. **Then loop forward**: Story 1.2 (Auth.js + SSO), 1.3 (RBAC), 1.4 (FlowDesk shell), 1.5/1.6 (user mgmt — depend on 1.7's audit append helper), 1.8 (audit search/filter).
 
 **Decisions locked (2026-04-28, Don):**
 - Repo location: stay in `C:\Dev\flowdev` (code coexists with `_bmad-output/`, `_bmad/`, `artifacts/`, this file).
 - Package manager: **npm** (FlowDesk parity), not pnpm. Story 1.1 AC text says `pnpm`; story file documents the npm interpretation. Planning artifact `epics-and-stories.md` is **not** edited — story files own per-story decisions.
-- GitHub repo: **already exists** at `https://github.com/donschult-mpamot/flowdev`. Workspace scopes use `@flowdev/*`; `MPAMOT` lives only in the GitHub org name and internal docs.
+- GitHub repo: `https://github.com/donschult-mpamot/flowdev` (default branch `main`). Workspace scopes use `@flowdev/*`; `MPAMOT` lives only in the GitHub org name and internal docs.
+- `gh` CLI installed via winget (`gh 2.92.0` at `C:\Program Files\GitHub CLI\gh.exe`); authenticated as `donschult-mpamot` (token in OS keyring).
 
-**Story 1.1 verification (2026-04-28):**
+**Story 1.1 verification (2026-04-28, all green locally):**
 - `npm install` ✓ (411 packages across 6 workspaces)
 - `npm run db:generate` ✓ (Prisma 6.19.3 client from empty schema)
 - `npm run typecheck` ✓ (all 6 workspaces)
@@ -28,9 +39,6 @@
 - `npm run test` ✓ (8 tests across 6 workspaces)
 - `npm run build` ✓ (Next.js standalone output, jobs/worker tsc emit)
 - `docker compose up -d` ✓ (`flowdev-postgres` healthy on `:5432`, group visible in Docker Desktop)
-- Single commit `811110f` on `feat/story-1-1-bootstrap` (this branch is local-only — Don pushes manually).
-
-**Push action (Don):** when ready, `git push -u origin feat/story-1-1-bootstrap` then open a draft PR to confirm GitHub Actions CI passes the same four gates.
 
 **Active sprint tracker:** `_bmad-output/implementation-artifacts/sprint-status.yaml` — 10 epics, 91 stories. Epic 1 = `in-progress`, Story 1.1 = `review`, all others = `backlog`. Re-sequencing notes embedded as comments inside the file.
 
@@ -43,7 +51,7 @@
 | 1 — Analysis | ✅ Complete | `_bmad-output/planning-artifacts/product-brief.md` |
 | 2 — Planning | ✅ Complete | `_bmad-output/planning-artifacts/PRD.md`, `_bmad-output/planning-artifacts/UX-design.md` |
 | 3 — Solutioning | ✅ Complete | `_bmad-output/planning-artifacts/architecture.md`, `_bmad-output/planning-artifacts/webhook-contract-v1.md`, `_bmad-output/planning-artifacts/epics-and-stories.md`, `_bmad-output/planning-artifacts/implementation-readiness-report-2026-04-28.md` |
-| 4 — Implementation | 🟡 In progress (Story 1.1 implemented, status `review`; commit `811110f` local on `feat/story-1-1-bootstrap`) | `_bmad-output/implementation-artifacts/sprint-status.yaml`, `_bmad-output/implementation-artifacts/1-1-bootstrap-monorepo-postgres-prisma-and-base-infrastructure.md`, plus the scaffold itself (`apps/`, `packages/`, root configs) |
+| 4 — Implementation | 🟡 In progress (Story 1.1 — PR #1 open as draft, CI running, awaiting `[CR]`) | PR #1 ([link](https://github.com/donschult-mpamot/flowdev/pull/1)) · `_bmad-output/implementation-artifacts/sprint-status.yaml` · `_bmad-output/implementation-artifacts/1-1-bootstrap-...md` · the scaffold (`apps/`, `packages/`, root configs) |
 
 ---
 
@@ -148,10 +156,11 @@ If gate 1 or 2 fail at 60 days → re-rack v1.1 priorities. If gates 3, 4 pass �
 ## How to resume in a new session
 
 1. **Open this file first.** It tells you the current phase, what's done, and the next step.
-2. **Check the BMAD output directory** — `_bmad-output/planning-artifacts/` and `_bmad-output/implementation-artifacts/` — for the actual artifacts.
-3. **Run the recommended next step** from §Current state. BMAD skills should run in a fresh context window each.
-4. **For implementation work:** consult `epics-and-stories.md` for the active epic/story, plus `architecture.md` §9 for the relevant Prisma entities and any sprint-planning re-sequencing notes from §Sprint-planning notes above.
-5. **Update this file** at every meaningful milestone — phase completion, epic kickoff, story completion, gate passes/failures, decision changes.
+2. **If a PR is open (see §Current state):** check its CI status with `"/c/Program Files/GitHub CLI/gh.exe" pr checks <num>` before doing anything else. Fixes for a red CI run come before any new BMAD work.
+3. **Check the BMAD output directory** — `_bmad-output/planning-artifacts/` and `_bmad-output/implementation-artifacts/` — for the actual artifacts.
+4. **Run the recommended next step** from §Current state. BMAD skills should run in a fresh context window each.
+5. **For implementation work:** consult `epics-and-stories.md` for the active epic/story, plus `architecture.md` §9 for the relevant Prisma entities and any sprint-planning re-sequencing notes from §Sprint-planning notes above.
+6. **Update this file** at every meaningful milestone — phase completion, epic kickoff, story completion, gate passes/failures, decision changes, PR open/merge.
 
 ### Useful skill quick-reference
 
