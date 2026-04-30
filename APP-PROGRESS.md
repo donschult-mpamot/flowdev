@@ -3,7 +3,7 @@
 **Project:** FlowDev (codename **MPAMOT** — Multi-Platform Application Monitoring & Operations Tool)
 **Owner:** Don
 **Methodology:** BMAD (Phase-driven planning → implementation)
-**Last updated:** 2026-04-30 (Story 1.1 merged to `main` via PR #1; ready to start Story 1.7)
+**Last updated:** 2026-04-30 (Story 1.7 merged to `main` via PR #2; ready to start Story 1.2)
 
 > Single source of truth for project status across Claude Code sessions. Read this first when resuming work in a new session, then act on the **Next step** in §Current state.
 
@@ -11,18 +11,24 @@
 
 ## Current state
 
-**Phase:** 4 — Implementation, **Story 1.1 status `done`** — PR #1 merged to `main`.
+**Phase:** 4 — Implementation, **Stories 1.1 + 1.7 status `done`** — both merged to `main`.
 
 **✅ PR #1 (Story 1.1):** <https://github.com/donschult-mpamot/flowdev/pull/1> — MERGED 2026-04-30 07:26Z
 - Squash commit on `main`: `80dd6b9` — `feat(story-1.1): bootstrap monorepo, Postgres, Prisma, and base infrastructure (#1)`
 - Branch `feat/story-1-1-bootstrap` deleted (local + remote).
 - CR (bmad-code-review) ran 2026-04-30 against the original scaffold; 11 patches applied + 8 deferred (see `_bmad-output/implementation-artifacts/deferred-work.md`); CI green on the merged commit.
 
+**✅ PR #2 (Story 1.7):** <https://github.com/donschult-mpamot/flowdev/pull/2> — MERGED 2026-04-30
+- Squash commit on `main`: `d4dd30b` — `Story 1.7: Persist immutable audit log infrastructure (#2)`
+- Branch `feat/story-1-7-audit-log` deleted (local + remote).
+- CR ran 2026-04-30 against the implementation (same-LLM caveat noted in story Review Findings — ran with Opus 4.7 like the implementation; cross-LLM diversity lost). 3 decisions resolved + 7 patches applied + 11 deferred. CI green on the merged commit.
+- Substantive carry-forward: `@flowdev/db` now re-exports `Prisma`/`PrismaClient` (Decision 6); `audit_logs.occurredAt` is `TIMESTAMPTZ(3)`; 5 immutability triggers (3 row-level + 2 statement-level companions for no-row UPDATE/DELETE + TRUNCATE) raise SQLSTATE 42501 via `audit_logs_immutable_guard()`; `appendAudit()` helper exposed via `@flowdev/shared`; ESLint `no-restricted-syntax` rule blocks direct `*.auditLog.{update,...}` calls; CI workflow grew a `postgres:15-alpine` service container; **host port 5432 → 5433** (local + CI) to coexist with a pre-installed Windows Postgres; tsconfig flipped from source-as-types to **dist-as-types** (forced by cross-package TS rootDir constraint when `@flowdev/shared` started importing from `@flowdev/db`); CI Build now runs **before** Typecheck so `packages/*/dist/*.d.ts` is hydrated for cross-package type resolution.
+
 **Next step when you resume:**
-1. **`[CS]` Story 1.7** — `bmad-create-story` for `1-7-persist-immutable-audit-log-...`. Sequenced alongside 1.1 per §Sprint-planning notes item 1; Stories 1.5/1.6 (user-mgmt) depend on its audit append helper. Run in a fresh session.
-2. **`[DS]` Story 1.7** — implementation, on a new branch `feat/story-1-7-audit-log` cut from `main`.
-3. **`[CR]` Story 1.7** — adversarial review in a fresh session with a different LLM (see prompt template precedent: cross-LLM diversity matters).
-4. **Merge → loop forward**: Story 1.2 (Auth.js + SSO), 1.3 (RBAC), 1.4 (FlowDesk shell), 1.5/1.6 (user mgmt — depend on 1.7), 1.8 (audit search/filter).
+1. **`[CS]` Story 1.2** — `bmad-create-story` for `1-2-authenticate-via-azure-entra-id-sso-with-credentials-fallback`. Auth.js v5 with Azure Entra ID SSO + credentials fallback. Run in a fresh session.
+2. **`[DS]` Story 1.2** — implementation, on a new branch `feat/story-1-2-auth` cut from `main`.
+3. **`[CR]` Story 1.2** — adversarial review in a fresh session with a different LLM (Opus 4.6 / Sonnet 4.6 ideally — cross-LLM diversity matters).
+4. **Merge → loop forward**: Story 1.3 (server-side RBAC), 1.4 (FlowDesk shell), 1.5/1.6 (user mgmt — depend on 1.7's `appendAudit` helper, which now exists), 1.8 (audit search/filter UI).
 
 **Decisions locked (2026-04-28, Don):**
 - Repo location: stay in `C:\Dev\flowdev` (code coexists with `_bmad-output/`, `_bmad/`, `artifacts/`, this file).
@@ -30,16 +36,17 @@
 - GitHub repo: `https://github.com/donschult-mpamot/flowdev` (default branch `main`). Workspace scopes use `@flowdev/*`; `MPAMOT` lives only in the GitHub org name and internal docs.
 - `gh` CLI installed via winget (`gh 2.92.0` at `C:\Program Files\GitHub CLI\gh.exe`); authenticated as `donschult-mpamot` (token in OS keyring).
 
-**Story 1.1 verification (2026-04-28, all green locally):**
-- `npm install` ✓ (411 packages across 6 workspaces)
-- `npm run db:generate` ✓ (Prisma 6.19.3 client from empty schema)
-- `npm run typecheck` ✓ (all 6 workspaces)
-- `npm run lint` ✓ (Next.js ESLint zero errors; other workspaces lint not configured per story scope)
-- `npm run test` ✓ (8 tests across 6 workspaces)
-- `npm run build` ✓ (Next.js standalone output, jobs/worker tsc emit)
-- `docker compose up -d` ✓ (`flowdev-postgres` healthy on `:5432`, group visible in Docker Desktop)
+**Story 1.7 verification (2026-04-30, post-CR, all green locally):**
+- `npm install` ✓ (workspace symlinks for `@flowdev/db` ↔ `@flowdev/shared` resolve cleanly)
+- `npm run db:up` ✓ (`flowdev-postgres` healthy on `127.0.0.1:5433`, Docker Desktop)
+- `npm run db:migrate --workspace=packages/db` ✓ (first real migration `20260430082039_1_7_audit_log` applies)
+- `npm run typecheck` ✓ (all 6 workspaces, post Build)
+- `npm run lint` ✓ (root flat config + new `no-restricted-syntax` rule)
+- `npm run test` ✓ (15 tests in `@flowdev/shared`: 3 cn + 3 unit append + 9 integration; 5 smoke tests across other workspaces)
+- `npm run build` ✓ (packages emit `dist/*.{js,d.ts}` first, then apps; Next.js standalone)
+- `docker exec flowdev-postgres psql -c "\d+ audit_logs"` ✓ (TIMESTAMPTZ(3) `occurredAt`; 5 triggers + `audit_logs_immutable_guard()` function present)
 
-**Active sprint tracker:** `_bmad-output/implementation-artifacts/sprint-status.yaml` — 10 epics, 91 stories. Epic 1 = `in-progress`, Story 1.1 = `review`, all others = `backlog`. Re-sequencing notes embedded as comments inside the file.
+**Active sprint tracker:** `_bmad-output/implementation-artifacts/sprint-status.yaml` — 10 epics, 91 stories. Epic 1 = `in-progress`, Stories 1.1 + 1.7 = `done`, all others = `backlog`. Re-sequencing notes embedded as comments inside the file.
 
 ---
 
@@ -50,7 +57,7 @@
 | 1 — Analysis | ✅ Complete | `_bmad-output/planning-artifacts/product-brief.md` |
 | 2 — Planning | ✅ Complete | `_bmad-output/planning-artifacts/PRD.md`, `_bmad-output/planning-artifacts/UX-design.md` |
 | 3 — Solutioning | ✅ Complete | `_bmad-output/planning-artifacts/architecture.md`, `_bmad-output/planning-artifacts/webhook-contract-v1.md`, `_bmad-output/planning-artifacts/epics-and-stories.md`, `_bmad-output/planning-artifacts/implementation-readiness-report-2026-04-28.md` |
-| 4 — Implementation | 🟡 In progress (Story 1.1 ✅ merged to `main` via PR #1; Story 1.7 next) | PR #1 ([link](https://github.com/donschult-mpamot/flowdev/pull/1)) merged at squash commit `80dd6b9` · `_bmad-output/implementation-artifacts/sprint-status.yaml` · `_bmad-output/implementation-artifacts/1-1-bootstrap-...md` · `_bmad-output/implementation-artifacts/deferred-work.md` · the scaffold (`apps/`, `packages/`, root configs) |
+| 4 — Implementation | 🟡 In progress (Stories 1.1 + 1.7 ✅ merged to `main`; Story 1.2 next) | PR #1 ([link](https://github.com/donschult-mpamot/flowdev/pull/1)) merged at `80dd6b9`; PR #2 ([link](https://github.com/donschult-mpamot/flowdev/pull/2)) merged at `d4dd30b` · `_bmad-output/implementation-artifacts/sprint-status.yaml` · per-story spec files in `_bmad-output/implementation-artifacts/` · `_bmad-output/implementation-artifacts/deferred-work.md` |
 
 ---
 
