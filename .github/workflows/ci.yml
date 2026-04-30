@@ -42,8 +42,11 @@ jobs:
       - name: Lint
         run: npm run lint --workspaces --if-present
 
-      - name: Test
-        run: npm run test --workspaces --if-present
-
+      # Build before Test: vitest resolves cross-workspace imports
+      # (e.g. apps/web -> @flowdev/shared) via package.json `main`,
+      # which now points to dist/index.js. Tests need dist hydrated first.
       - name: Build
         run: npm run build --workspaces --if-present
+
+      - name: Test
+        run: npm run test --workspaces --if-present
