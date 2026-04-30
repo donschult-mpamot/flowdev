@@ -32,7 +32,9 @@ datasource db {
 // Postgres layer (REVOKE in the 1_7_audit_log migration).
 model AuditLog {
   id           BigInt   @id @default(autoincrement())
-  occurredAt   DateTime @default(now())
+  // TIMESTAMPTZ — audit logs need unambiguous instants. Cross-region readers
+  // see the same moment without relying on session-level timezone config.
+  occurredAt   DateTime @default(now()) @db.Timestamptz(3)
   actorId      String?
   appId        String?
   connectorId  String?

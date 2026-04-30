@@ -62,17 +62,19 @@ jobs:
       - name: Run migrations
         run: npm run db:migrate:deploy --workspace=packages/db
 
+      # Build first so packages/*/dist is hydrated. Both Typecheck and Test
+      # need it: Typecheck because cross-workspace imports resolve through
+      # package.json `types` → dist/index.d.ts (Story 1.7 dist-as-types
+      # pattern). Test because vitest resolves runtime imports through
+      # package.json `main` → dist/index.js (Story 1.1 review pattern).
+      - name: Build
+        run: npm run build --workspaces --if-present
+
       - name: Typecheck
         run: npm run typecheck --workspaces --if-present
 
       - name: Lint
         run: npm run lint --workspaces --if-present
-
-      # Build before Test: vitest resolves cross-workspace imports
-      # (e.g. apps/web -> @flowdev/shared) via package.json `main`,
-      # which now points to dist/index.js. Tests need dist hydrated first.
-      - name: Build
-        run: npm run build --workspaces --if-present
 
       - name: Test
         run: npm run test --workspaces --if-present

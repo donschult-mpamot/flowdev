@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE "audit_logs" (
     "id" BIGSERIAL NOT NULL,
-    "occurredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "occurredAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "actorId" TEXT,
     "appId" TEXT,
     "connectorId" TEXT,
@@ -48,14 +48,28 @@ BEGIN
 END;
 $$;
 
-CREATE TRIGGER audit_logs_no_update
+-- Row-level guards: fire on each affected row. They catch the common case
+-- (an UPDATE/DELETE that actually changes rows).
+CREATE OR REPLACE TRIGGER audit_logs_no_update
   BEFORE UPDATE ON "audit_logs"
   FOR EACH ROW EXECUTE FUNCTION audit_logs_immutable_guard();
 
-CREATE TRIGGER audit_logs_no_delete
+CREATE OR REPLACE TRIGGER audit_logs_no_delete
   BEFORE DELETE ON "audit_logs"
   FOR EACH ROW EXECUTE FUNCTION audit_logs_immutable_guard();
 
-CREATE TRIGGER audit_logs_no_truncate
+-- Statement-level companions: fire even on no-match `WHERE 1=0` style
+-- statements that wouldn't otherwise affect any row (and so wouldn't fire
+-- the row-level triggers above). Closes the silent-bypass gap.
+CREATE OR REPLACE TRIGGER audit_logs_no_update_stmt
+  BEFORE UPDATE ON "audit_logs"
+  FOR EACH STATEMENT EXECUTE FUNCTION audit_logs_immutable_guard();
+
+CREATE OR REPLACE TRIGGER audit_logs_no_delete_stmt
+  BEFORE DELETE ON "audit_logs"
+  FOR EACH STATEMENT EXECUTE FUNCTION audit_logs_immutable_guard();
+
+-- TRUNCATE is a statement-level operation by definition.
+CREATE OR REPLACE TRIGGER audit_logs_no_truncate
   BEFORE TRUNCATE ON "audit_logs"
   FOR EACH STATEMENT EXECUTE FUNCTION audit_logs_immutable_guard();
