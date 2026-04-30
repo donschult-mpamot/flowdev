@@ -3,7 +3,7 @@
 **Project:** FlowDev (codename **MPAMOT** — Multi-Platform Application Monitoring & Operations Tool)
 **Owner:** Don
 **Methodology:** BMAD (Phase-driven planning → implementation)
-**Last updated:** 2026-04-30 (Story 1.7 merged to `main` via PR #2; ready to start Story 1.2)
+**Last updated:** 2026-04-30 EOD (Stories 1.1 + 1.7 merged; ready to start Story 1.2 tomorrow)
 
 > Single source of truth for project status across Claude Code sessions. Read this first when resuming work in a new session, then act on the **Next step** in §Current state.
 
@@ -24,11 +24,80 @@
 - CR ran 2026-04-30 against the implementation (same-LLM caveat noted in story Review Findings — ran with Opus 4.7 like the implementation; cross-LLM diversity lost). 3 decisions resolved + 7 patches applied + 11 deferred. CI green on the merged commit.
 - Substantive carry-forward: `@flowdev/db` now re-exports `Prisma`/`PrismaClient` (Decision 6); `audit_logs.occurredAt` is `TIMESTAMPTZ(3)`; 5 immutability triggers (3 row-level + 2 statement-level companions for no-row UPDATE/DELETE + TRUNCATE) raise SQLSTATE 42501 via `audit_logs_immutable_guard()`; `appendAudit()` helper exposed via `@flowdev/shared`; ESLint `no-restricted-syntax` rule blocks direct `*.auditLog.{update,...}` calls; CI workflow grew a `postgres:15-alpine` service container; **host port 5432 → 5433** (local + CI) to coexist with a pre-installed Windows Postgres; tsconfig flipped from source-as-types to **dist-as-types** (forced by cross-package TS rootDir constraint when `@flowdev/shared` started importing from `@flowdev/db`); CI Build now runs **before** Typecheck so `packages/*/dist/*.d.ts` is hydrated for cross-package type resolution.
 
-**Next step when you resume:**
-1. **`[CS]` Story 1.2** — `bmad-create-story` for `1-2-authenticate-via-azure-entra-id-sso-with-credentials-fallback`. Auth.js v5 with Azure Entra ID SSO + credentials fallback. Run in a fresh session.
-2. **`[DS]` Story 1.2** — implementation, on a new branch `feat/story-1-2-auth` cut from `main`.
-3. **`[CR]` Story 1.2** — adversarial review in a fresh session with a different LLM (Opus 4.6 / Sonnet 4.6 ideally — cross-LLM diversity matters).
-4. **Merge → loop forward**: Story 1.3 (server-side RBAC), 1.4 (FlowDesk shell), 1.5/1.6 (user mgmt — depend on 1.7's `appendAudit` helper, which now exists), 1.8 (audit search/filter UI).
+### Resume tomorrow — step-by-step
+
+**Pre-flight (do these before opening Claude Code):**
+
+```bash
+# 1. Make sure local main is in sync with origin (Phase 4 always works off main).
+cd C:/Dev/flowdev
+git checkout main
+git pull origin main
+git status                                   # expect clean tree (.claude/ untracked is fine)
+
+# 2. Start Docker Desktop. (No CLI for this — open the app, wait until it shows
+#    "Engine running". Without it, Story 1.2's tests will skip and dev iterations
+#    will hit ECONNREFUSED on Postgres.)
+
+# 3. Bring up flowdev-postgres on host port 5433 (NOT 5432 — see §Today's gotchas).
+npm run db:up
+docker ps --filter name=flowdev-postgres     # expect (healthy)
+
+# 4. Verify the post-1.7 baseline is intact.
+npm run build && npm run typecheck && npm run lint
+DATABASE_URL='postgresql://flowdev:flowdev@localhost:5433/flowdev?schema=public' \
+  npm run test                               # expect ~20 tests across 6 workspaces
+
+# 5. (Optional) push this APP-PROGRESS.md update if you haven't yet.
+git status                                   # if APP-PROGRESS.md shows as modified/committed-but-unpushed,
+git push origin main                         # push it now
+```
+
+**Then — open a fresh Claude Code session (Opus 4.7 1M is fine; cross-LLM only matters for `[CR]` later):**
+
+**`[CS]` Story 1.2 — paste this prompt verbatim:**
+
+> Read APP-PROGRESS.md, then run /bmad-create-story for Story 1.2 (slug: 1-2-authenticate-via-azure-entra-id-sso-with-credentials-fallback). This is the next forward story per APP-PROGRESS.md "Resume tomorrow" sequence. Auth.js v5 with Azure Entra ID SSO + credentials fallback per FR61, FR62. Story 1.7's `appendAudit()` helper from `@flowdev/shared` is now available; the spec should plan auth-event audit log calls (sign-in success/failure, session creation) using it.
+
+That session writes the spec, syncs sprint-status, and commits the story file. Then **end that session**.
+
+**`[DS]` Story 1.2 — fresh session, paste this prompt:**
+
+> Run /bmad-dev-story for Story 1.2 in this repo.
+>
+> Context:
+> - Repo: C:\Dev\flowdev (already cwd'd here, on `main`, clean tree)
+> - Story spec: _bmad-output/implementation-artifacts/1-2-authenticate-via-azure-entra-id-sso-with-credentials-fallback.md (read it fully; decisions pre-resolved at top; tasks/subtasks are the work breakdown)
+> - Sprint tracker: _bmad-output/implementation-artifacts/sprint-status.yaml (currently ready-for-dev; flip to in-progress on start, review on completion)
+> - Base branch: main (clean; PRs #1 and #2 merged at `80dd6b9` and `d4dd30b`)
+> - New branch: cut feat/story-1-2-auth from main before any edits
+> - Stories 1.1 + 1.7 patches in force — preserve all of: dist-as-types tsconfig, root eslint.config.mjs (now with `no-restricted-syntax` for audit_logs), CI Build-before-Typecheck-before-Test, host port 5433 for flowdev-postgres, `@flowdev/db` re-exports `Prisma`/`PrismaClient`, `appendAudit()` from `@flowdev/shared` is the only auth-log writer.
+> - Local Postgres: `npm run db:up` (flowdev-postgres on 127.0.0.1:5433); test runs need DATABASE_URL exported.
+> - gh CLI: "/c/Program Files/GitHub CLI/gh.exe" (authed as donschult-mpamot)
+>
+> Constraints to keep top of mind:
+> - Package manager is npm (not pnpm)
+> - All Docker resources keep the flowdev- prefix
+> - @flowdev/* scope; MPAMOT only in GH org name + internal docs
+> - FlowDev tech stack must conform to FlowDesk's; flag any deviation
+> - Auth.js v5 (`next-auth@^5.0.0-beta.30`); `@auth/prisma-adapter@^2.11.1`; `@azure/msal-node@^5.0.6` per tech-stack §4
+>
+> When done: 4 gates green locally, status → review, sprint-status synced, File List populated, branch pushed, draft PR opened against main.
+
+End that session when it's done.
+
+**`[CR]` Story 1.2 — fresh session, ideally a different LLM (Opus 4.6 or Sonnet 4.6) for cross-LLM blind spots.** Use the same prompt template you used for PR #2's CR, swap PR #2 → the new PR number, and the slug.
+
+**Then loop forward:** Story 1.3 (server-side RBAC), 1.4 (FlowDesk shell), 1.5/1.6 (user mgmt — these can finally call `appendAudit({op: "user.invite", ...})` etc. since 1.7 shipped), 1.8 (audit search/filter UI).
+
+### Today's gotchas (capture so future-Don/future-Claude doesn't hit them cold)
+
+- **Postgres port 5433, not 5432.** Story 1.7's CR moved the local + CI bind off the Windows-installed-Postgres collision. Anything referencing `5432` in docs or new files is a regression. `.env.example` and `.env` should both have `DATABASE_URL=...localhost:5433...`.
+- **DATABASE_URL must be set when running tests** for Story 1.7's integration suite to actually run. Without it, the suite skips with a `console.warn` notice. CI sets it at the workflow job level; local devs export it (or source `.env` into the shell) before `npm run test`.
+- **Build before Typecheck.** Cross-package imports now resolve through `packages/*/dist/*.d.ts` (dist-as-types). If you typecheck before building, you'll get TS6059 ("not under rootDir") errors. CI handles this in the workflow; local devs running typecheck in isolation should `npm run build` first.
+- **`prisma migrate reset`** triggers a Prisma AI-safety guardrail when run by Claude Code. It needs `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` env var with the user's exact consent message. Not a problem for `migrate dev`/`migrate deploy`, only `reset`.
+- **Same-LLM CR caveat (Story 1.7).** PR #2's code review ran with Opus 4.7, the same model that wrote the implementation. Cross-LLM diversity benefit was lost. For Story 1.2 onward, if practical, run `[CR]` in a session with Opus 4.6 or Sonnet 4.6 — orthogonal blind spots. Documented in PR #2's Review Findings § header for traceability.
+- **Don't litter prod migrations with reset/destructive ops.** Story 1.7's migration uses `CREATE OR REPLACE TRIGGER` (PG14+) for idempotency. Future migrations should follow the same pattern so partial-apply recovery is clean.
 
 **Decisions locked (2026-04-28, Don):**
 - Repo location: stay in `C:\Dev\flowdev` (code coexists with `_bmad-output/`, `_bmad/`, `artifacts/`, this file).
