@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 // FlowDesk pattern: reuse a global PrismaClient in dev to avoid HMR connection storms.
 // In production each container gets a fresh process, so the global is ignored.
@@ -21,3 +21,9 @@ export const prisma: PrismaClient =
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
+
+// Re-export Prisma types/namespace so consumers (e.g. @flowdev/shared/audit)
+// route through @flowdev/db rather than depending on @prisma/client directly.
+// Story 1.7 Decision 6: @flowdev/shared → @flowdev/db is the single direction
+// for Prisma access across the workspace.
+export { Prisma, PrismaClient };

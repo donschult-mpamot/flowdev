@@ -17,4 +17,21 @@ export default [
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    files: ["**/*.{ts,tsx,mts,cts}"],
+    rules: {
+      // NFR-S6: audit_logs is append-only. Defense-in-depth alongside the
+      // Postgres-level REVOKE in the 1_7_audit_log migration. Catches any
+      // *.auditLog.{update,updateMany,delete,deleteMany,upsert} call shape.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "CallExpression[callee.type='MemberExpression'][callee.object.property.name='auditLog'][callee.property.name=/^(update|updateMany|delete|deleteMany|upsert)$/]",
+          message:
+            "audit_logs is append-only (NFR-S6). Use appendAudit() from @flowdev/shared.",
+        },
+      ],
+    },
+  },
 ];

@@ -9,6 +9,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": false,
+    "declaration": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
@@ -17,12 +18,12 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@flowdev/connectors": ["packages/connectors/src"],
-      "@flowdev/connectors/*": ["packages/connectors/src/*"],
-      "@flowdev/db": ["packages/db/src"],
-      "@flowdev/db/*": ["packages/db/src/*"],
-      "@flowdev/shared": ["packages/shared/src"],
-      "@flowdev/shared/*": ["packages/shared/src/*"]
+      "@flowdev/connectors": ["packages/connectors/dist"],
+      "@flowdev/connectors/*": ["packages/connectors/dist/*"],
+      "@flowdev/db": ["packages/db/dist"],
+      "@flowdev/db/*": ["packages/db/dist/*"],
+      "@flowdev/shared": ["packages/shared/dist"],
+      "@flowdev/shared/*": ["packages/shared/dist/*"]
     }
   }
 }
