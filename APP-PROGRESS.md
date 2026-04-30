@@ -3,7 +3,7 @@
 **Project:** FlowDev (codename **MPAMOT** — Multi-Platform Application Monitoring & Operations Tool)
 **Owner:** Don
 **Methodology:** BMAD (Phase-driven planning → implementation)
-**Last updated:** 2026-04-28 EOD (Story 1.1 PR #1 open as draft, CI running; resume tomorrow)
+**Last updated:** 2026-04-30 (Story 1.1 merged to `main` via PR #1; ready to start Story 1.7)
 
 > Single source of truth for project status across Claude Code sessions. Read this first when resuming work in a new session, then act on the **Next step** in §Current state.
 
@@ -11,19 +11,18 @@
 
 ## Current state
 
-**Phase:** 4 — Implementation, **Story 1.1 status `review`** — PR open as draft, CI running.
+**Phase:** 4 — Implementation, **Story 1.1 status `done`** — PR #1 merged to `main`.
 
-**🟦 PR #1 (Story 1.1):** <https://github.com/donschult-mpamot/flowdev/pull/1>
-- Base: `main` (initial README-only seed commit `7e41274`)
-- Head: `feat/story-1-1-bootstrap` — two commits: `da55b8e` scaffold + `3291266` BMAD artifacts (post-rebase SHAs)
-- Status at EOD: draft, mergeable, CI `pending` on the `typecheck / lint / test / build` job
+**✅ PR #1 (Story 1.1):** <https://github.com/donschult-mpamot/flowdev/pull/1> — MERGED 2026-04-30 07:26Z
+- Squash commit on `main`: `80dd6b9` — `feat(story-1.1): bootstrap monorepo, Postgres, Prisma, and base infrastructure (#1)`
+- Branch `feat/story-1-1-bootstrap` deleted (local + remote).
+- CR (bmad-code-review) ran 2026-04-30 against the original scaffold; 11 patches applied + 8 deferred (see `_bmad-output/implementation-artifacts/deferred-work.md`); CI green on the merged commit.
 
 **Next step when you resume:**
-1. **Check CI result on PR #1.** `"/c/Program Files/GitHub CLI/gh.exe" pr checks 1` from `C:\Dev\flowdev`. If green → step 2. If red → fix forward, push, re-check.
-2. **`[CR]` Code Review** — `bmad-code-review` against PR #1, in a **fresh session with a different LLM** than Opus 4.7 (Sonnet 4.6 or Opus 4.6 ideally — different blind spots). Review surface = the diff in PR #1.
-3. **CR passes / fixes applied → mark PR ready (un-draft) → merge to `main`.** Use **Squash and merge** or **Rebase and merge**; both preserve `main`'s initial commit.
-4. **`[CS]` Story 1.7** (audit log infrastructure — sequenced alongside 1.1 per §Sprint-planning notes item 1) → `[DS]` → `[CR]`.
-5. **Then loop forward**: Story 1.2 (Auth.js + SSO), 1.3 (RBAC), 1.4 (FlowDesk shell), 1.5/1.6 (user mgmt — depend on 1.7's audit append helper), 1.8 (audit search/filter).
+1. **`[CS]` Story 1.7** — `bmad-create-story` for `1-7-persist-immutable-audit-log-...`. Sequenced alongside 1.1 per §Sprint-planning notes item 1; Stories 1.5/1.6 (user-mgmt) depend on its audit append helper. Run in a fresh session.
+2. **`[DS]` Story 1.7** — implementation, on a new branch `feat/story-1-7-audit-log` cut from `main`.
+3. **`[CR]` Story 1.7** — adversarial review in a fresh session with a different LLM (see prompt template precedent: cross-LLM diversity matters).
+4. **Merge → loop forward**: Story 1.2 (Auth.js + SSO), 1.3 (RBAC), 1.4 (FlowDesk shell), 1.5/1.6 (user mgmt — depend on 1.7), 1.8 (audit search/filter).
 
 **Decisions locked (2026-04-28, Don):**
 - Repo location: stay in `C:\Dev\flowdev` (code coexists with `_bmad-output/`, `_bmad/`, `artifacts/`, this file).
@@ -51,7 +50,7 @@
 | 1 — Analysis | ✅ Complete | `_bmad-output/planning-artifacts/product-brief.md` |
 | 2 — Planning | ✅ Complete | `_bmad-output/planning-artifacts/PRD.md`, `_bmad-output/planning-artifacts/UX-design.md` |
 | 3 — Solutioning | ✅ Complete | `_bmad-output/planning-artifacts/architecture.md`, `_bmad-output/planning-artifacts/webhook-contract-v1.md`, `_bmad-output/planning-artifacts/epics-and-stories.md`, `_bmad-output/planning-artifacts/implementation-readiness-report-2026-04-28.md` |
-| 4 — Implementation | 🟡 In progress (Story 1.1 — PR #1 open as draft, CI running, awaiting `[CR]`) | PR #1 ([link](https://github.com/donschult-mpamot/flowdev/pull/1)) · `_bmad-output/implementation-artifacts/sprint-status.yaml` · `_bmad-output/implementation-artifacts/1-1-bootstrap-...md` · the scaffold (`apps/`, `packages/`, root configs) |
+| 4 — Implementation | 🟡 In progress (Story 1.1 ✅ merged to `main` via PR #1; Story 1.7 next) | PR #1 ([link](https://github.com/donschult-mpamot/flowdev/pull/1)) merged at squash commit `80dd6b9` · `_bmad-output/implementation-artifacts/sprint-status.yaml` · `_bmad-output/implementation-artifacts/1-1-bootstrap-...md` · `_bmad-output/implementation-artifacts/deferred-work.md` · the scaffold (`apps/`, `packages/`, root configs) |
 
 ---
 
