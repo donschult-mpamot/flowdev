@@ -1,5 +1,5 @@
 # generated: 2026-04-28
-# last_updated: 2026-04-30 (Story 1.1 code review complete; status done)
+# last_updated: 2026-04-30 (Story 1.7 contexted; status ready-for-dev)
 # project: flowdev
 # project_key: NOKEY
 # tracking_system: file-system
@@ -60,6 +60,7 @@ project: flowdev
 # Story 1.1 contexted on 2026-04-28; epic-1 moved to in-progress.
 # Story 1.1 implementation complete on 2026-04-28; status -> review (commit da55b8e, branch feat/story-1-1-bootstrap).
 # Story 1.1 code review complete on 2026-04-30 (bmad-code-review against PR #1); 13 patches applied; status -> done.
+# Story 1.7 contexted on 2026-04-30 (bmad-create-story); status -> ready-for-dev.
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
@@ -75,7 +76,7 @@ development_status:
   1-4-render-the-flowdesk-shell-with-sidebar-header-dark-mode-and-theme-parity: backlog
   1-5-admin-invites-edits-and-removes-flowdev-users: backlog
   1-6-admin-assigns-roles-and-developer-scope: backlog
-  1-7-persist-immutable-audit-log: backlog
+  1-7-persist-immutable-audit-log: ready-for-dev
   1-8-admin-searches-and-filters-the-audit-log: backlog
   epic-1-retrospective: optional
 
