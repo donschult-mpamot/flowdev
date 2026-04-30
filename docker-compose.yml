@@ -7,7 +7,10 @@ services:
     restart: unless-stopped
     ports:
       # Bind to loopback only — local dev should not expose Postgres to the LAN.
-      - "127.0.0.1:5432:5432"
+      # Host port 5433 (not 5432) avoids collision with a Windows-installed
+      # Postgres service that some dev boxes have pre-installed for FlowDesk
+      # or other projects. CI uses the same host port for parity.
+      - "127.0.0.1:5433:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-flowdev}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flowdev}

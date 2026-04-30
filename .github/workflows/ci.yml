@@ -20,6 +20,29 @@ jobs:
     name: typecheck / lint / test / build
     runs-on: ubuntu-latest
 
+    # Postgres service mirrors the local flowdev-postgres compose service so
+    # integration tests (Story 1.7+) can exercise real DB-level semantics
+    # (transactional commit/rollback, table-level REVOKE) instead of mocks.
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: flowdev
+          POSTGRES_PASSWORD: flowdev
+          POSTGRES_DB: flowdev
+        ports:
+          # Host port 5433 matches local dev (compose uses the same to avoid
+          # colliding with a pre-installed Postgres on Windows boxes).
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U flowdev -d flowdev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://flowdev:flowdev@localhost:5433/flowdev?schema=public
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,6 +58,9 @@ jobs:
 
       - name: Generate Prisma client
         run: npm run db:generate --workspace=packages/db
+
+      - name: Run migrations
+        run: npm run db:migrate:deploy --workspace=packages/db
 
       - name: Typecheck
         run: npm run typecheck --workspaces --if-present
