@@ -6,7 +6,8 @@ services:
     container_name: flowdev-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      # Bind to loopback only — local dev should not expose Postgres to the LAN.
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-flowdev}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flowdev}

@@ -9,10 +9,13 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma: PrismaClient =
   globalForPrisma.prisma ??
   new PrismaClient({
+    // Default to error-only logs. Verbose query logging only when NODE_ENV is
+    // explicitly "development" — protects ACA Jobs (where NODE_ENV may be unset)
+    // from leaking SQL parameters to Log Analytics.
     log:
-      process.env.NODE_ENV === "production"
-        ? ["error"]
-        : ["query", "error", "warn"],
+      process.env.NODE_ENV === "development"
+        ? ["query", "error", "warn"]
+        : ["error"],
   });
 
 if (process.env.NODE_ENV !== "production") {

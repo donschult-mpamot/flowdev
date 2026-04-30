@@ -34,6 +34,9 @@ Thumbs.db
 # Claude Code
 .claude/settings.local.json
 
+# BMAD scratch artifacts (diff snapshots produced by review skills, etc.)
+_bmad-output/**/*.patch
+
 # Prisma generated artifacts (regenerated on demand)
 packages/db/src/generated/
 

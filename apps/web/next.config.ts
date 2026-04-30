@@ -9,22 +9,14 @@ const nextConfig: NextConfig = {
     "@flowdev/shared",
     "@flowdev/connectors",
   ],
-  // Resolve ".js" import specifiers in workspace TS sources to their ".ts"
-  // siblings. Required because apps/worker + apps/jobs use TypeScript NodeNext
-  // (which mandates explicit .js extensions on relative imports), so the
-  // packages/* source files write `./cn.js` etc. — webpack can't follow that
-  // back to ./cn.ts without this alias.
+  // Resolve ".js" import specifiers in workspace sources. Compiled `dist/*.js`
+  // wins; `.ts`/`.tsx` are fallbacks for any source-condition consumer.
   webpack(config) {
     config.resolve.extensionAlias = {
       ...(config.resolve.extensionAlias ?? {}),
-      ".js": [".ts", ".tsx", ".js"],
+      ".js": [".js", ".ts", ".tsx"],
     };
     return config;
-  },
-  // Turbopack (dev server) needs the same extension alias.
-  turbopack: {
-    resolveExtensions: [".ts", ".tsx", ".js", ".jsx", ".json"],
-    resolveAlias: {},
   },
 };
 

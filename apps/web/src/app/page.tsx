@@ -12,7 +12,7 @@ export default function Home() {
       <h1
         className={cn(
           "text-3xl font-semibold tracking-tight",
-          "text-[--color-brand-purple]",
+          "text-[var(--color-brand-purple)]",
         )}
       >
         FlowDev — bootstrap OK

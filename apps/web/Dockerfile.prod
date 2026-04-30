@@ -28,8 +28,16 @@ COPY . .
 # Generate Prisma client (no models in v0.0.1 — still emits client stubs).
 RUN npm run db:generate --workspace=packages/db
 
+# Build workspace packages before the app — apps consume their compiled dist.
+RUN npm run build --workspace=packages/shared
+RUN npm run build --workspace=packages/db
+RUN npm run build --workspace=packages/connectors
+
 # Build the Next.js standalone output.
 RUN npm run build --workspace=apps/web
+
+# Sanity guard: a missing standalone dir would otherwise produce a server-less image.
+RUN test -d /app/apps/web/.next/standalone
 
 # Stage 3 — runtime
 FROM node:20-alpine AS runner

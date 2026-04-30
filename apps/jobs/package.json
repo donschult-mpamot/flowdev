@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "lint": "echo 'no lint configured for @flowdev/jobs'",
+    "lint": "eslint .",
     "test": "vitest run",
     "job:hourly-aggregate": "tsx src/hourly-aggregate.ts",
     "job:daily-aggregate": "tsx src/daily-aggregate.ts",

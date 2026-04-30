@@ -1,6 +1,6 @@
 # Story 1.1: Bootstrap monorepo, Postgres, Prisma, and base infrastructure
 
-Status: review
+Status: done
 
 <!-- Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -335,7 +335,7 @@ Three issues hit during verification, all resolved in-session:
 2. **Second typecheck failed (TS2835 — `Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'`).** Cause: `apps/worker` and `apps/jobs` use NodeNext resolution (correct for Node ESM runtime), which mandates explicit extensions. Bundler-style extensionless imports work for `apps/web` (Next.js) and packages consumed by it, but break NodeNext consumers. Fixed by switching all relative imports across `packages/*` to explicit `.js` extensions (TypeScript transparently resolves `.js` to the `.ts` source). This satisfies both NodeNext (worker/jobs) and bundler (Next.js) once paired with the next.config fix below.
 3. **`next build` failed (`Module not found: Can't resolve './cn.js'`).** Cause: webpack doesn't follow TypeScript's `.js`→`.ts` resolution. Fixed by adding `extensionAlias: { ".js": [".ts", ".tsx", ".js"] }` to `apps/web/next.config.ts` (and the equivalent `resolveExtensions` for Turbopack). This is the standard webpack monorepo workaround for the dual-resolution constraint.
 
-After these three fixes: typecheck, lint, test (8 tests across 6 workspaces), and build all pass clean. Docker Compose brings up `flowdev-postgres` healthy on `:5432`. Single Git commit on `feat/story-1-1-bootstrap`: `811110f`.
+After these three fixes: typecheck, lint, test (8 tests across 6 workspaces), and build all pass clean. Docker Compose brings up `flowdev-postgres` healthy on `:5432`. Scaffold commit on `feat/story-1-1-bootstrap`: `da55b8e` (post-rebase SHA).
 
 ### Completion Notes List
 
@@ -470,5 +470,59 @@ Grouped by workspace. All paths relative to repo root (`C:\Dev\flowdev`).
 
 | Date | Change | Commit |
 |---|---|---|
-| 2026-04-28 | Story 1.1 scaffolded — monorepo + Postgres + Prisma + base infra. Verification: typecheck/lint/test/build all green; 8 tests pass; `flowdev-postgres` healthy in Docker. | `811110f` |
+| 2026-04-28 | Story 1.1 scaffolded — monorepo + Postgres + Prisma + base infra. Verification: typecheck/lint/test/build all green; 8 tests pass; `flowdev-postgres` healthy in Docker. | `da55b8e` |
 | 2026-04-28 | Story file status → `review`; sprint-status.yaml updated; APP-PROGRESS.md next step → `[CR]`. | _(this commit)_ |
+| 2026-04-30 | Code review (bmad-code-review) ran against PR #1 with three adversarial layers. 3 decisions resolved (TS-source-as-package-main → real `tsc` builds + `main: dist/index.js`; lint → wired into all 6 workspaces; globals.css → keep). 11 patches applied. 8 deferred to `deferred-work.md`. Lint surfaced and fixed a real test bug in `cn.test.ts`. Status → `done`. | _(this commit)_ |
+
+---
+
+### Review Findings
+
+bmad-code-review run on 2026-04-30 against PR #1 (head `a4e15f4`, branch `feat/story-1-1-bootstrap` vs `main`). Three layers: Blind Hunter (diff-only), Edge Case Hunter (diff + project read), Acceptance Auditor (diff + spec + canonical inputs).
+
+Tally: 3 decision-needed, 11 patches, 8 deferred, 8 dismissed (false positive / handled / out-of-Story-1.1-scope).
+
+**Headline:** Acceptance Auditor verified all six workspaces, all seven Job entrypoints, all four `.gitkeep` placeholders, all `flowdev-` Docker naming, every tech-stack pin, the empty Prisma schema, the gated deploy workflow, and `<html lang="en-ZA">`. Both AC1 and AC2 are met. The substantive issues below are scaffold-design choices and a small set of footguns — not AC violations.
+
+#### Decisions needed
+
+- [x] [Review][Decision] **TS-source-as-package-main is a runtime trap for worker/jobs in production** — `packages/{db,shared,connectors}/package.json` set `"main": "./src/index.ts"` with `"build": "echo 'no build step ...'"` no-ops. `apps/worker/Dockerfile.prod:36` and `apps/jobs/Dockerfile.prod:35` copy `packages/` to the runtime stage **unbuilt**. The compiled `apps/worker/dist/index.js` (and `apps/jobs/dist/*.js`) will at runtime resolve `@flowdev/db|shared|connectors` to those `.ts` sources and crash with `ERR_UNKNOWN_FILE_EXTENSION` — production has no `tsx`. The trap is **dormant in 1.1** because the worker stub doesn't import workspace packages, but the worker `package.json` already declares them as deps and Story 2.10 will trip it on first import. Three resolutions: (a) add real `tsc` build to packages/* and flip `main` to `dist/index.js`; (b) ship `tsx` in the production runtime image and exec via `tsx`; (c) accept the dormant trap and fix in Story 2.10. Don's call. Coupled to: `next.config.ts` `extensionAlias` order `[".ts",".tsx",".js"]` — only correct *while* packages/* are TS-source; flips to wrong ordering the moment option (a) lands.
+- [x] [Review][Decision] **Lint coverage asymmetry across workspaces** — only `apps/web` has a real ESLint flat config; the other five workspaces stub `"lint": "echo 'no lint configured for @flowdev/<x>'"`. AC2 says lint runs "for every workspace package" and the spirit (all workspaces participate via `--workspaces --if-present`) is preserved, but real lint signal is web-only. Wire ESLint flat config into `apps/{worker,jobs}` and `packages/{db,shared,connectors}` now, or defer to Story 10.1?
+- [x] [Review][Decision] **`apps/web/src/app/globals.css` adds a `prefers-color-scheme: dark` block ahead of Story 1.4 (FlowDesk shell)** — lines 15–20. Not an AC violation, but Story 1.1 §What this story is not doing explicitly defers theme work to Story 1.4. Keep the placeholder dark block or rip out until 1.4? **Resolved:** keep as-is (Don, 2026-04-30) — Story 1.4 will replace it anyway.
+
+#### Patches
+
+- [x] [Review][Patch] **Prisma client `log` default leaks queries when `NODE_ENV` is undefined** [`packages/db/src/index.ts:13`] — current ternary is `process.env.NODE_ENV === "production" ? ["error"] : ["query", "error", "warn"]`. ACA-Job-launched processes that don't have `NODE_ENV` pinned fall into the verbose branch and emit every SQL query (with parameter values, including pre-encryption secrets later) to stdout → ACA → Log Analytics. Invert so the safe default applies when `NODE_ENV` is unset: `process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"]`.
+- [x] [Review][Patch] **`tsconfig.base.json` `paths` declares `apps/*` as packages** [`tsconfig.base.json:20-25`] — `@flowdev/web`, `@flowdev/worker`, `@flowdev/jobs` map to `apps/*/src`. Apps aren't packages; the alias is meaningless and shadows what npm workspaces would resolve. Drop the three apps entries; keep only `@flowdev/{connectors,db,shared}`.
+- [x] [Review][Patch] **Brand-purple Tailwind v4 arbitrary-value syntax is wrong** [`apps/web/src/app/page.tsx:15`] — `text-[--color-brand-purple]` is emitted as a literal CSS value, not a `var()` reference. Should be `text-[var(--color-brand-purple)]`. Verify the heading actually renders purple in the browser; if it doesn't, this is the cause.
+- [x] [Review][Patch] **Postgres binds to `0.0.0.0:5432` with weak default creds** [`docker-compose.yml:8-9`] — combined with `.env.example` defaults of `flowdev/flowdev/flowdev`, the DB is reachable from any network the dev box is on. Bind to `127.0.0.1:5432:5432`.
+- [x] [Review][Patch] **`apps/jobs` Dockerfile defaults `JOB_NAME=hourly-aggregate`** [`apps/jobs/Dockerfile.prod:41-43`] — if any of the seven ACA cron triggers forgets to override `JOB_NAME`, that slot silently runs the hourly-aggregate workload. Drop the default and add a startup guard that fails fast if `JOB_NAME` is empty or not in the seven-name allowlist.
+- [x] [Review][Patch] **`deploy.yml` for-loop has no `set -e`** [`.github/workflows/deploy.yml:97-102`] — bash for-loop iterates seven `az containerapp job update` calls; if call #3 fails, calls #4–#7 still run and the step's exit code reflects only the last call. Production split-brain risk. Add `set -euo pipefail` at the top of the `run:` block.
+- [x] [Review][Patch] **Deploy workflow has no `concurrency:` block** [`.github/workflows/deploy.yml`] — two simultaneous `workflow_dispatch` runs (or a re-trigger of an in-flight run) race ACA rollouts. Add `concurrency: { group: deploy, cancel-in-progress: false }`. CI workflow has concurrency control; deploy doesn't.
+- [x] [Review][Patch] **CI workflow has no top-level `permissions:`** [`.github/workflows/ci.yml`] — inherits whatever the repo default is. Add explicit `permissions: { contents: read }` so fork PRs can't gain unintended posture once secrets are added in later stories. (deploy.yml already does this at job level.)
+- [x] [Review][Patch] **CI `concurrency.cancel-in-progress: true` cancels mid-flight runs on `push: main`** [`.github/workflows/ci.yml:9-11`] — when two commits land back-to-back on main, the second cancels the first's CI run, leaving an "incomplete" check on the first commit. Either set `cancel-in-progress: false`, or scope the group so PR runs cancel each other but main pushes don't.
+- [x] [Review][Patch] **Story file Change Log + Debug Log reference commit `811110f` that doesn't exist on the branch** [this story file, §Debug Log References & §Change Log] — actual commits on `feat/story-1-1-bootstrap` are `da55b8e` (scaffold) + `3291266` (BMAD artifacts) per `git log` and `APP-PROGRESS.md`. Update the references.
+- [x] [Review][Patch] **Dead `// eslint-disable-next-line no-console` directives in stubs** [`apps/worker/src/index.ts:12`, `apps/jobs/src/_lib/stub.ts:12`] — those workspaces stub lint; the directives lint-pass-through nothing and mislead future maintainers into thinking ESLint runs there. Strip them.
+
+#### Deferred
+
+- [x] [Review][Defer] Add `.npmrc` with `engine-strict=true` so the `engines: node: "20.x", npm: "10.x"` pin is enforced — currently silent drift on dev boxes (story file already notes the dev machine runs Node 24/npm 11). Defer: cosmetic on a single-developer scaffold; revisit when more devs join.
+- [x] [Review][Defer] Add `.gitattributes` to force LF on Dockerfiles + shell scripts — Windows dev box risk; CRLF would break alpine `sh` invocations like `apps/jobs/Dockerfile.prod` `CMD ["sh", "-c", ...]`. Defer: not biting today; add when a non-alpine base or POSIX-shell script lands.
+- [x] [Review][Defer] CODEOWNERS / branch protection / `dependabot.yml` — fresh repo. Defer: 1.1 ships scaffold; ops hardening in Story 10.x.
+- [x] [Review][Defer] `flowdev-postgres-data` volume credential drift — `POSTGRES_*` env changes after first init produce auth-fail errors with no clue. Defer: document in dev runbook (Story 1.2 onward).
+- [x] [Review][Defer] `.dockerignore` doesn't exclude `*.tsbuildinfo`, `*.test.ts`, `vitest.config.ts`, `eslint.config.mjs`, `.env.example` — image bloat + Windows path traces in tsbuildinfo. Defer: not blocking; tighten before first ACR push.
+- [x] [Review][Defer] No `wait-on tcp:5432` between `db:up` and `dev` — first request after fresh up hits ECONNREFUSED. Defer to Story 1.2 when Auth.js actually queries the DB on boot.
+- [x] [Review][Defer] Vitest extension-alias parity across workspaces — only `apps/web` has the dual-resolution fix. Defer: cross-package vitest tests don't exist yet.
+- [x] [Review][Defer] `apps/web/Dockerfile.prod` has no `RUN test -d /app/apps/web/.next/standalone` guard before COPY — silent server-less image if `output: "standalone"` ever fails to emit. Defer: add when the deploy gate flips on (Don's ops task).
+
+#### Dismissed (logged for traceability)
+
+- `tw-animate-css` declared but unused — Acceptance Auditor verified it is in tech-stack §5 line 103, so an allowed scaffold dep.
+- `zod` declared but unused in `packages/shared` — explicitly future-proofing per story §4.1; "Zod schemas to land per-story".
+- `adduser --system` BusyBox-flag concern — base IS `node:20-alpine`; BusyBox-correct.
+- `npm ci` not in `deploy.yml` — Dockerfiles do their own `npm ci`; spec-text vs impl mismatch but the impl is right.
+- Bcrypt/argon2 ABI minor-pin concern — pre-emptive; no native modules in 1.1.
+- `db:down -v` foot-gun — documentation footnote, not code.
+- Page renders extra prose under "FlowDev — bootstrap OK" — Auditor info; not an AC violation.
+- `tsconfig.base.json` adds compiler flags beyond story §1.8 (`noUncheckedIndexedAccess`, `noImplicitOverride`, `incremental`) — additive, positive deviation.
+

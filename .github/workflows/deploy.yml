@@ -19,6 +19,12 @@ on:
         required: false
         type: string
 
+# Serialize deploys — concurrent ACA rollouts race each other and can leave
+# replicas flapping mid-rollout. Queue, do not cancel.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
 env:
   IMAGE_REGISTRY: ${{ vars.ACR_LOGIN_SERVER }}
   IMAGE_NAME_PREFIX: flowdev
@@ -94,6 +100,7 @@ jobs:
 
       - name: Update apps/jobs Container App Job image (all 7 jobs share the same image)
         run: |
+          set -euo pipefail
           for job in hourly-aggregate daily-aggregate retention-prune cost-data-pull resource-snapshot sarb-fx-pull dek-rewrap-sweep; do
             az containerapp job update \
               --name "${{ vars.AZURE_CONTAINERAPP_JOBS_PREFIX }}-${job}" \

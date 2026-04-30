@@ -8,7 +8,8 @@ describe("cn()", () => {
 
   it("merges class names and resolves Tailwind conflicts", () => {
     expect(cn("p-4", "p-6")).toBe("p-6");
-    expect(cn("text-red-500", false && "text-blue-500", "font-bold")).toBe(
+    const isBlue: boolean = false;
+    expect(cn("text-red-500", isBlue && "text-blue-500", "font-bold")).toBe(
       "text-red-500 font-bold",
     );
   });

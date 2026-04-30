@@ -17,12 +17,6 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@flowdev/web": ["apps/web/src"],
-      "@flowdev/web/*": ["apps/web/src/*"],
-      "@flowdev/worker": ["apps/worker/src"],
-      "@flowdev/worker/*": ["apps/worker/src/*"],
-      "@flowdev/jobs": ["apps/jobs/src"],
-      "@flowdev/jobs/*": ["apps/jobs/src/*"],
       "@flowdev/connectors": ["packages/connectors/src"],
       "@flowdev/connectors/*": ["packages/connectors/src/*"],
       "@flowdev/db": ["packages/db/src"],

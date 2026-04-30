@@ -9,7 +9,6 @@
 // This bootstrap stub just proves the workspace builds and runs.
 
 function main(): void {
-  // eslint-disable-next-line no-console
   console.log(
     JSON.stringify({
       service: "@flowdev/worker",

@@ -9,7 +9,6 @@
 //   dek-rewrap-sweep.ts    → Stories 2.5 / 2.8 (master-key rotation)
 
 export function runStubJob(jobName: string): void {
-  // eslint-disable-next-line no-console
   console.log(
     JSON.stringify({
       service: "@flowdev/jobs",
