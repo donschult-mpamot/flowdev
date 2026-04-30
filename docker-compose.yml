@@ -1,0 +1,25 @@
+name: flowdev
+
+services:
+  flowdev-postgres:
+    image: postgres:15-alpine
+    container_name: flowdev-postgres
+    restart: unless-stopped
+    ports:
+      # Bind to loopback only — local dev should not expose Postgres to the LAN.
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-flowdev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flowdev}
+      POSTGRES_DB: ${POSTGRES_DB:-flowdev}
+    volumes:
+      - flowdev-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flowdev} -d ${POSTGRES_DB:-flowdev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  flowdev-postgres-data:
+    name: flowdev-postgres-data

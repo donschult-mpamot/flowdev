@@ -1,0 +1,218 @@
+# generated: 2026-04-28
+# last_updated: 2026-04-30 (Story 1.1 code review complete; status done)
+# project: flowdev
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+#
+# WITHIN-EPIC RE-SEQUENCING (from epics-and-stories.md frontmatter and APP-PROGRESS.md §Sprint-planning notes):
+# ============================================================================================================
+# Story IDs are stable references — keep them; just adjust execution order.
+#
+# Epic 1 — Story 1.7 (immutable audit log) implemented alongside Story 1.1 (bootstrap).
+#   Stories 1.5, 1.6 depend on the audit append helper being available.
+# Epic 2 — Stories 2.18 (status pills), 2.19 (<ConnectorStatusRow>), 2.10 (worker runtime),
+#   and 2.11 (failure-state machine) implemented before Story 2.6 (attach connector) and
+#   Story 2.17 (onboarding panel polish), which compose them.
+# Epic 3 — Stories 3.6 (<SparklineCell>) and 3.7 (<TimeRangeSelector>) before Story 3.5
+#   (uptime view), which uses both.
+# Epic 8 — Stories 8.9 (<AlertDetailLayout>) and 8.10 (notification bell extension)
+#   implemented alongside Story 8.4 (acknowledge endpoint), since 8.4's user-flow ACs
+#   reference both surfaces.
+#
+# EPIC SEQUENCING (from epics-and-stories.md, per PM direction):
+# ==============================================================
+# Epic 1 (Platform Foundation) → Epic 2 (Connector Framework, sequenced first per PM) →
+# Epics 3–10 follow per architecture/PRD dependency graph.
+
+generated: 2026-04-28
+last_updated: 2026-04-30
+project: flowdev
+# Story 1.1 contexted on 2026-04-28; epic-1 moved to in-progress.
+# Story 1.1 implementation complete on 2026-04-28; status -> review (commit da55b8e, branch feat/story-1-1-bootstrap).
+# Story 1.1 code review complete on 2026-04-30 (bmad-code-review against PR #1); 13 patches applied; status -> done.
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # ============================================================
+  # Epic 1 — Platform Foundation: Identity, RBAC, Shell & Audit
+  # ============================================================
+  epic-1: in-progress
+  1-1-bootstrap-monorepo-postgres-prisma-and-base-infrastructure: done
+  1-2-authenticate-via-azure-entra-id-sso-with-credentials-fallback: backlog
+  1-3-enforce-server-side-rbac-on-every-route-handler-and-data-path: backlog
+  1-4-render-the-flowdesk-shell-with-sidebar-header-dark-mode-and-theme-parity: backlog
+  1-5-admin-invites-edits-and-removes-flowdev-users: backlog
+  1-6-admin-assigns-roles-and-developer-scope: backlog
+  1-7-persist-immutable-audit-log: backlog
+  1-8-admin-searches-and-filters-the-audit-log: backlog
+  epic-1-retrospective: optional
+
+  # ============================================================
+  # Epic 2 — Connector Framework & Application Registry
+  # (sequenced first after Epic 1 per PM direction)
+  # ============================================================
+  epic-2: backlog
+  2-1-admin-registers-an-app-with-metadata: backlog
+  2-2-admin-edits-decommissions-and-deletes-apps: backlog
+  2-3-system-surfaces-app-lifecycle-status-everywhere: backlog
+  2-4-define-connector-interface-and-connectortype-enum: backlog
+  2-5-implement-envelope-encryption-with-azure-key-vault-and-usecredential: backlog
+  2-6-admin-attaches-credentials-and-connectors-to-an-app: backlog
+  2-7-admin-validates-connector-configuration-before-activation: backlog
+  2-8-admin-rotates-connector-credentials-without-history-loss: backlog
+  2-9-admin-disables-re-enables-and-removes-connectors: backlog
+  2-10-implement-worker-runtime-with-node-cron-and-aca-jobs: backlog
+  2-11-implement-connector-failure-state-machine-and-retry-policy: backlog
+  2-12-implement-http-uptime-probe-connector: backlog
+  2-13-implement-webhook-receiver-with-hmac-idempotency-and-outbox: backlog
+  2-14-hmac-failures-excluded-from-connector-failure-threshold: backlog
+  2-15-admin-rotates-per-app-webhook-secret: backlog
+  2-16-webhook-delivery-diagnostic-view-admin-only: backlog
+  2-17-connector-onboarding-inline-panel-journey-3-ux: backlog
+  2-18-apphealthpill-connectorstatuspill-and-alertstatepill-components: backlog
+  2-19-connectorstatusrow-component: backlog
+  epic-2-retrospective: optional
+
+  # ============================================================
+  # Epic 3 — Uptime, Performance & Resource Growth Monitoring
+  # ============================================================
+  epic-3: backlog
+  3-1-provision-time-series-storage-with-brin-indexes: backlog
+  3-2-provision-aggregate-tables-with-idempotent-upserts: backlog
+  3-3-hourly-aggregate-roll-up-job: backlog
+  3-4-daily-aggregate-roll-up-job: backlog
+  3-5-compute-and-view-per-app-uptime-percentages: backlog
+  3-6-sparklinecell-component: backlog
+  3-7-timerangeselector-component: backlog
+  3-8-implement-azure-arm-connector: backlog
+  3-9-implement-azure-pg-metrics-connector: backlog
+  3-10-implement-postgres-direct-connector: backlog
+  3-11-view-per-app-resource-growth-trends: backlog
+  3-12-view-http-response-time-series-on-app-detail: backlog
+  epic-3-retrospective: optional
+
+  # ============================================================
+  # Epic 4 — Cost Intelligence with ZAR/FX & Forecast
+  # ============================================================
+  epic-4: backlog
+  4-1-provision-costrecord-and-fxrate-models-with-snapshot-semantics: backlog
+  4-2-sarb-fx-daily-job: backlog
+  4-3-implement-azure-cost-management-connector: backlog
+  4-4-implement-digital-ocean-cost-connector: backlog
+  4-5-costdisplay-component-three-variants: backlog
+  4-6-view-per-app-month-to-date-cost: backlog
+  4-7-view-monthly-cost-trend-per-app: backlog
+  4-8-view-portfolio-wide-cost-rollup: backlog
+  4-9-cost-forecast-with-freshness-disclosure: backlog
+  4-10-developer-cost-visibility-global-toggle: backlog
+  epic-4-retrospective: optional
+
+  # ============================================================
+  # Epic 5 — Adoption Analytics via Webhook Events
+  # ============================================================
+  epic-5: backlog
+  5-1-worker-drains-webhook-outbox-into-activityevent: backlog
+  5-2-compute-dau-wau-mau-per-app: backlog
+  5-3-track-last-active-at-per-user-app: backlog
+  5-4-portfolio-todays-logins-cell-composition: backlog
+  epic-5-retrospective: optional
+
+  # ============================================================
+  # Epic 6 — Email Communication Monitoring (Azure Comms Services)
+  # ============================================================
+  epic-6: backlog
+  6-1-provision-emailevent-model: backlog
+  6-2-implement-azure-communication-services-email-connector: backlog
+  6-3-view-email-volume-delivery-and-bounce-trends: backlog
+  6-4-recipient-masking-with-audit-logged-unmask: backlog
+  epic-6-retrospective: optional
+
+  # ============================================================
+  # Epic 7 — Portfolio & App Detail Dashboards
+  # ============================================================
+  epic-7: backlog
+  7-1-portfolio-table-data-layer: backlog
+  7-2-portfoliotable-component-with-sort-filter-search-url-state: backlog
+  7-3-portfolio-page-meets-sub-2s-warm-cache-slo: backlog
+  7-4-appdetaillayout-2-3-and-1-3: backlog
+  7-5-timerangeselector-wired-across-pages: backlog
+  7-6-portfolio-empty-loading-and-filtered-empty-states: backlog
+  7-7-mobile-responsive-treatment-for-portfolio-and-app-detail: backlog
+  epic-7-retrospective: optional
+
+  # ============================================================
+  # Epic 8 — Alerting: Rules, Engine, Lifecycle & Channels
+  # ============================================================
+  epic-8: backlog
+  8-1-alertrule-model-and-rule-configuration-ui: backlog
+  8-2-alert-rule-evaluation-engine: backlog
+  8-3-alert-lifecycle-state-machine: backlog
+  8-4-acknowledge-a-firing-alert: backlog
+  8-5-resolve-an-alert-manually: backlog
+  8-6-acs-email-channel-for-alert-delivery: backlog
+  8-7-acs-email-template-mobile-friendly-mirrors-in-app: backlog
+  8-8-sso-transparent-deep-link-redirect-for-alerts-id: backlog
+  8-9-mobile-portrait-alertdetaillayout-with-sticky-bottom-ack: backlog
+  8-10-notification-bell-extension-with-firing-alert-badge: backlog
+  8-11-role-scoped-in-app-alert-notifications: backlog
+  epic-8-retrospective: optional
+
+  # ============================================================
+  # Epic 9 — Reporting & CSV Export
+  # ============================================================
+  epic-9: backlog
+  9-1-report-generator-service: backlog
+  9-2-csv-export-with-zar-and-usd-parallel-columns: backlog
+  9-3-reports-page: backlog
+  epic-9-retrospective: optional
+
+  # ============================================================
+  # Epic 10 — Production Hardening & Observability (gates v1 GA)
+  # ============================================================
+  epic-10: backlog
+  10-1-structured-json-logging-across-web-worker-and-jobs: backlog
+  10-2-correlation-id-propagation: backlog
+  10-3-connector-run-logging-retained-30-days: backlog
+  10-4-webhook-validation-failure-logging-nfr-o4: backlog
+  10-5-app-insights-query-duration-emission-and-nfr-sc4-tripwire: backlog
+  10-6-retention-prune-job: backlog
+  10-7-per-app-retention-overrides: backlog
+  10-8-pen-test-threat-model-review-gate: backlog
+  10-9-accessibility-audit-gate: backlog
+  10-10-storybook-visual-regression-infrastructure: backlog
+  10-11-playwright-e2e-axe-core-accessibility-tests: backlog
+  10-12-real-device-mobile-testing-for-j4: backlog
+  10-13-cross-browser-support-validation: backlog
+  epic-10-retrospective: optional

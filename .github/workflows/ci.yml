@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel superseded PR runs; never cancel mid-flight runs on main (each commit
+# on main needs its own completed CI for the merge-status paper trail).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: typecheck / lint / test / build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run db:generate --workspace=packages/db
+
+      - name: Typecheck
+        run: npm run typecheck --workspaces --if-present
+
+      - name: Lint
+        run: npm run lint --workspaces --if-present
+
+      # Build before Test: vitest resolves cross-workspace imports
+      # (e.g. apps/web -> @flowdev/shared) via package.json `main`,
+      # which now points to dist/index.js. Tests need dist hydrated first.
+      - name: Build
+        run: npm run build --workspaces --if-present
+
+      - name: Test
+        run: npm run test --workspaces --if-present

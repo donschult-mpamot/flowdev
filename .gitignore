@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+dist/
+build/
+out/
+.turbo/
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Coverage / test output
+coverage/
+.nyc_output/
+*.lcov
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+# Claude Code
+.claude/settings.local.json
+
+# BMAD scratch artifacts (diff snapshots produced by review skills, etc.)
+_bmad-output/**/*.patch
+
+# Prisma generated artifacts (regenerated on demand)
+packages/db/src/generated/
+
+# tsbuildinfo
+*.tsbuildinfo

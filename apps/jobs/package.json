@@ -1,0 +1,30 @@
+{
+  "name": "@flowdev/jobs",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "job:hourly-aggregate": "tsx src/hourly-aggregate.ts",
+    "job:daily-aggregate": "tsx src/daily-aggregate.ts",
+    "job:retention-prune": "tsx src/retention-prune.ts",
+    "job:cost-data-pull": "tsx src/cost-data-pull.ts",
+    "job:resource-snapshot": "tsx src/resource-snapshot.ts",
+    "job:sarb-fx-pull": "tsx src/sarb-fx-pull.ts",
+    "job:dek-rewrap-sweep": "tsx src/dek-rewrap-sweep.ts"
+  },
+  "dependencies": {
+    "@flowdev/db": "*",
+    "@flowdev/shared": "*",
+    "@flowdev/connectors": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.0"
+  }
+}

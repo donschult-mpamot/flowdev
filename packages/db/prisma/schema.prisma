@@ -1,0 +1,21 @@
+// FlowDev Prisma schema
+//
+// This file is intentionally empty of models for Story 1.1 (bootstrap).
+// Architecture §9 entities (User, App, Connector, ConnectorCredential,
+// HealthCheckResult, MetricSnapshot, MetricHourlyAggregate,
+// MetricDailyAggregate, CostRecord, FxRate, WebhookEventRaw, ActivityEvent,
+// IntegrationCallEvent, CustomMetricEvent, ResourceSnapshot, EmailEvent,
+// AlertRule, AlertEvent, AuditLog, UserAppAssignment, Setting) land in
+// their owning stories.
+//
+// Story 1.7 introduces AuditLog (with Postgres-level revoke on UPDATE/DELETE).
+// Story 1.2 introduces User/Account/Session via @auth/prisma-adapter.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+/*
+ * FlowDev brand tokens.
+ * Story 1.4 will replace this with the canonical FlowDesk style guide §3
+ * CSS variable system (full light + dark theme parity).
+ */
+@theme {
+  --color-brand-purple: #700ce9;
+  --color-background: #ffffff;
+  --color-foreground: #0a0a0a;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-background: #0a0a0a;
+    --color-foreground: #fafafa;
+  }
+}

@@ -1,0 +1,53 @@
+# Stage 1 — install + build
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+RUN apk add --no-cache libc6-compat openssl
+
+COPY package.json package-lock.json ./
+COPY apps/web/package.json apps/web/package.json
+COPY apps/worker/package.json apps/worker/package.json
+COPY apps/jobs/package.json apps/jobs/package.json
+COPY packages/connectors/package.json packages/connectors/package.json
+COPY packages/db/package.json packages/db/package.json
+COPY packages/shared/package.json packages/shared/package.json
+
+RUN npm ci
+
+COPY . .
+
+RUN npm run db:generate --workspace=packages/db
+
+# Build workspace packages first (jobs import their compiled dist at runtime).
+RUN npm run build --workspace=packages/shared
+RUN npm run build --workspace=packages/db
+RUN npm run build --workspace=packages/connectors
+
+RUN npm run build --workspace=apps/jobs
+
+# Stage 2 — runtime
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+RUN apk add --no-cache libc6-compat openssl \
+ && addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 jobs
+
+COPY --from=builder --chown=jobs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=jobs:nodejs /app/apps/jobs/dist ./apps/jobs/dist
+COPY --from=builder --chown=jobs:nodejs /app/apps/jobs/package.json ./apps/jobs/package.json
+COPY --from=builder --chown=jobs:nodejs /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder --chown=jobs:nodejs /app/packages/shared/package.json ./packages/shared/package.json
+COPY --from=builder --chown=jobs:nodejs /app/packages/db/dist ./packages/db/dist
+COPY --from=builder --chown=jobs:nodejs /app/packages/db/package.json ./packages/db/package.json
+COPY --from=builder --chown=jobs:nodejs /app/packages/connectors/dist ./packages/connectors/dist
+COPY --from=builder --chown=jobs:nodejs /app/packages/connectors/package.json ./packages/connectors/package.json
+
+USER jobs
+
+# JOB_NAME selects which Job entrypoint to execute (passed by ACA Jobs cron trigger).
+# Allowlist + fail-fast guard prevents an unset/typo'd value from silently running
+# the wrong workload.
+CMD ["sh", "-eu", "-c", "case \"${JOB_NAME:-}\" in hourly-aggregate|daily-aggregate|retention-prune|cost-data-pull|resource-snapshot|sarb-fx-pull|dek-rewrap-sweep) exec node apps/jobs/dist/${JOB_NAME}.js ;; *) echo \"FATAL: JOB_NAME must be one of hourly-aggregate|daily-aggregate|retention-prune|cost-data-pull|resource-snapshot|sarb-fx-pull|dek-rewrap-sweep (got: '${JOB_NAME:-<unset>}')\" >&2 ; exit 64 ;; esac"]
