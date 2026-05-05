@@ -1,6 +1,6 @@
 # Story 1.2: Authenticate via Azure Entra ID SSO with credentials fallback
 
-Status: ready-for-dev
+Status: review
 
 <!-- Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -436,3 +436,47 @@ MODIFIED:
 - File List populated above.
 - Branch `feat/story-1-2-auth` pushed to origin; **draft** PR opened against `main` (NOT marked ready-for-review until Don supplies real `AZURE_AD_*` creds and runs the live SSO smoke).
 - APP-PROGRESS.md updated with the in-progress / review status (final `done` flip happens post-merge, same pattern as Story 1.7).
+
+---
+
+## Review Findings (2026-05-05, post-implementation CR)
+
+> **Same-LLM caveat (carried forward from Story 1.7):** This review ran in the same session and the same model (Opus 4.7) as the implementation. Cross-LLM blind-spot diversity was lost. Don's autonomous-loop authorisation explicitly accepted this trade-off; flagged for traceability so a future cross-LLM CR can be invoked retroactively if a blind-spot incident emerges.
+
+### Patches applied in this session
+
+| # | Severity | Finding | Patch |
+|---|---|---|---|
+| P1 | Security / Critical | Sign-in form posted directly to `/api/auth/callback/credentials` without a CSRF token. Auth.js v5 rejects unauthenticated form POSTs to its endpoints, so credentials sign-in would have failed end-to-end (worse, in a way the unit tests don't catch — they exercise `authorizeCredentials()` directly, bypassing the route). | Converted both buttons on `/sign-in` to **Server Actions** that call `signIn()` from `@/auth`. `apps/web/src/app/sign-in/actions.ts` wraps `signIn("credentials", {...})` and translates `AuthError` (`CredentialsSignin`) into a redirect to `/sign-in?error=CredentialsSignin&callbackUrl=...` so the page renders the inline error per AC2. |
+| P2 | Security | Sign-out form on `/portfolio` POSTed directly to `/api/auth/signout` — same CSRF problem as P1. | Converted to a Server Action calling `signOut({ redirectTo: "/sign-in" })` from `@/auth`. |
+| P3 | Type safety | Two consumer-side `as { role?: string }` casts on `session.user`. Dropped both via Auth.js module augmentation in `apps/web/src/types/next-auth.d.ts` (`Session.user` extended with `id?` + `role?`; `User.role?`; JWT `id?` + `role?` augmented in both `next-auth/jwt` and `@auth/core/jwt` for full reach). The `jwt`/`session` callbacks now use narrowing (`typeof token.id === "string"`) instead of casts — `@auth/core`'s open-ended JWT typing means the augmentation reaches consumer code (e.g. `portfolio/page.tsx`) but doesn't fully reach the callback's internal token type, so narrowing is the safe pattern there. |
+| P5 | Test gap | `authorizeCredentials()` returns null when `user.status` is `INVITED` or `REMOVED`, but neither branch was exercised. Without coverage, a refactor that accidentally allowed `INVITED` users to sign in (relevant to Story 1.5's invite flow) wouldn't be caught. | Added two integration tests: one mutates the seeded user to `INVITED` and asserts `authorize` returns null + writes `auth.signin.failure` with `reason: user_not_found_or_inactive`; another mutates to `REMOVED` and asserts the same null return. Test count: 14 (+2). |
+| P6 | Doc consistency | `packages/db/prisma/schema.prisma` header comment listed Story 1.2's models as a future story even after this story's migration landed. | Rewrote the header comment to a "models landed so far" + "subsequent stories" split that mirrors how Story 1.7 left it. |
+
+### Decisions resolved during review
+
+| # | Decision | Resolution |
+|---|---|---|
+| R1 | `apps/web/tsconfig.json` declaration setting | Set `declaration: false`. Auth.js v5's destructured exports (`auth`, `handlers`, `signIn`, `signOut`) inferred-type-not-portable error in strict + declaration mode. Workspace doesn't emit declarations anyway (`noEmit: true`), so the override is purely a TS-strictness escape hatch. Documented in carry-forward notes for the next person who wonders why it diverges from the package workspaces. |
+| R2 | `apps/web/tsconfig.json` baseUrl | Set explicit `baseUrl: "."`. Without it, `paths["@/*"]` inherits the `baseUrl: "."` from `tsconfig.base.json` which resolves at the repo root — making `@/auth` look for `./src/auth.ts` from the repo root, not from `apps/web/`. Webpack/Next picks up the path alias correctly with the explicit override. |
+| R3 | `authorizeCredentials` location | Moved out of `auth.ts` into `apps/web/src/auth.credentials.ts`. Required because vitest's ESM resolver fails on Auth.js v5's `next/server` imports (a known Vitest + Next.js packages incompatibility). Splitting the file lets the integration test import the credentials logic without instantiating `NextAuth()` at module load. `auth.ts` re-exports `authorizeCredentials` and `credentialsEnabled` so the public surface from `@/auth` is unchanged. |
+
+### Deferred work (carried into project deferred-work register)
+
+| Tag | Item | Why deferred |
+|---|---|---|
+| D-1.2.1 | **Audit-write failure UX:** if the DB is unreachable when `authorizeCredentials()` writes `auth.signin.failure`, the call throws and Auth.js returns a 500 instead of the inline error per AC2. | Trade-off favours integrity over UX: a silent skip on audit-write failure is worse than a noisy 500 (NFR-S6). If users-impacted-by-DB-blips becomes a real signal, revisit by wrapping the `appendAudit` calls inside `authorize` in a try/catch that logs and proceeds; track separately. |
+| D-1.2.2 | **Microsoft Entra provider with empty creds:** when `AZURE_AD_*` env vars are unset (CI placeholder situation), the provider registers with `clientId: undefined` and the "Sign in with Microsoft" button 500s on click. | Acceptable until Don supplies real creds — this is exactly the code-complete-with-stubs trade-off the autonomous-loop kickoff agreed to. The CI sso-live skip path documents the gap. |
+| D-1.2.3 | **Prisma `package.json#prisma` deprecation:** Prisma 6.19 emits a warning that `package.json#prisma.seed` will be removed in Prisma 7 in favour of a `prisma.config.ts` file. | Prisma 7 isn't shipping in v1's window; the deprecation isn't blocking and the migration is a 1-file move. Rolled into deferred-work for whoever lands the Prisma 7 bump. |
+| D-1.2.4 | **Server-side / Edge-only `credentialsEnabled` evaluation:** computed once at module load from `process.env`. Toggling the env var at runtime requires a process restart. | Standard Next.js / Auth.js pattern; matches Story 1.1 conventions. No real ops requirement to flip without a deploy. |
+| D-1.2.5 | **`role` propagation on role change:** because the session is JWT-strategy, an admin promoting a user via Story 1.5 won't take effect until the user re-signs-in (their existing token still carries the old role). | Architectural property of JWT sessions; explicit force-logout on role change is Story 1.6's territory. Documented here so 1.6's spec doesn't re-discover it. |
+
+### Verification (post-CR, all green locally)
+
+- `npm run build` ✓ (all 6 workspaces; Next.js standalone output; middleware bundled at 87.8 kB)
+- `npm run typecheck` ✓ (all 6 workspaces, post Build)
+- `npm run lint` ✓ (root flat config + Next lint; `no-restricted-syntax` rule from 1.7 still enforces `auditLog.update/delete/upsert` ban)
+- `DATABASE_URL=... AUTH_SECRET=... CREDENTIALS_FALLBACK_ENABLED=true npm run test` ✓ (33 tests across 6 workspaces — was 20 pre-1.2; +13 new in `@flowdev/web`: 4 isPublicPath + 2 bcrypt + 7 credentials integration; sso-live integration: 1 todo, correctly skipped)
+- `npm run db:seed` ✓ (idempotent; first + second run produce same `id`)
+- `docker exec flowdev-postgres psql -U flowdev -d flowdev -c "\\dp audit_logs"` ✓ (`flowdev=arxt/flowdev` — INSERT/SELECT only; the 1_7 REVOKE survived the 1_2 migration as expected)
+- `docker exec flowdev-postgres psql -U flowdev -d flowdev -c "\\d users"` ✓ (`passwordHash` text nullable; `status` UserStatus default INVITED; `role` Role default DEVELOPER; `removedAt` timestamp(3) nullable)

@@ -1,5 +1,9 @@
 import { cn } from "@flowdev/shared";
 import { credentialsEnabled } from "@/auth";
+import {
+  signInWithCredentialsAction,
+  signInWithMicrosoftEntraAction,
+} from "./actions";
 
 interface SignInPageProps {
   searchParams: Promise<{
@@ -60,11 +64,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           </div>
         ) : null}
 
-        <form
-          action="/api/auth/signin/microsoft-entra-id"
-          method="POST"
-          className="space-y-2"
-        >
+        <form action={signInWithMicrosoftEntraAction} className="space-y-2">
           <input type="hidden" name="callbackUrl" value={callbackUrl} />
           <button
             type="submit"
@@ -85,11 +85,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               <span className="h-px flex-1 bg-current" />
             </div>
 
-            <form
-              action="/api/auth/callback/credentials"
-              method="POST"
-              className="space-y-3"
-            >
+            <form action={signInWithCredentialsAction} className="space-y-3">
               <input type="hidden" name="callbackUrl" value={callbackUrl} />
               <label className="block space-y-1 text-sm">
                 <span className="font-medium">Email</span>

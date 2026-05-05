@@ -121,6 +121,45 @@ describe.skipIf(!hasDb)("credentials authorize() (integration)", () => {
     const after = await countAuditOp("auth.signin.success");
     expect(after).toBe(before);
   });
+
+  it("returns null when user.status is INVITED (must promote via invite flow first)", async () => {
+    await prisma.user.update({
+      where: { email: TEST_EMAIL },
+      data: { status: "INVITED" },
+    });
+
+    const before = await countAuditOp("auth.signin.failure");
+    const result = await authorizeCredentials({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+    });
+
+    expect(result).toBeNull();
+    const after = await countAuditOp("auth.signin.failure");
+    expect(after).toBe(before + 1);
+
+    const latest = await prisma.auditLog.findFirst({
+      where: { op: "auth.signin.failure" },
+      orderBy: { occurredAt: "desc" },
+    });
+    expect(latest?.context).toMatchObject({
+      reason: "user_not_found_or_inactive",
+    });
+  });
+
+  it("returns null when user.status is REMOVED (soft-deleted)", async () => {
+    await prisma.user.update({
+      where: { email: TEST_EMAIL },
+      data: { status: "REMOVED", removedAt: new Date() },
+    });
+
+    const result = await authorizeCredentials({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+    });
+
+    expect(result).toBeNull();
+  });
 });
 
 async function countAuditOp(op: string): Promise<number> {

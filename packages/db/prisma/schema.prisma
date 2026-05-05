@@ -1,22 +1,24 @@
 // FlowDev Prisma schema
 //
-// Story 1.7 (2026-04-30) added AuditLog — the first real model — and flipped
-// the project from `prisma db push` to `prisma migrate dev/deploy`.
-// Story 1.2 (2026-05-05) added Auth.js v5 models (User/Account/Session/
-// VerificationToken) plus the FlowDev User extensions (passwordHash, status,
-// role, removedAt) and the Role + UserStatus enums.
+// Models landed so far:
+//   AuditLog                                 → Story 1.7 (2026-04-30)
+//   User / Account / Session / VerificationToken
+//   + Role / UserStatus enums                → Story 1.2 (2026-05-05)
+// Migrations now drive the schema (`prisma migrate dev/deploy`).
+//
 // Subsequent stories add models incrementally:
-//   App                         → Story 2.1
-//   Connector / ConnectorCredential → Stories 2.4–2.5
-//   WebhookEventRaw             → Story 2.13
-//   HealthCheckResult           → Story 2.12
-//   MetricSnapshot / Hourly / Daily aggregates → Stories 3.1–3.4
-//   CostRecord / FxRate         → Stories 4.1–4.2
-//   ActivityEvent / IntegrationCallEvent / CustomMetricEvent → Story 5.1
-//   ResourceSnapshot            → Story 3.x
-//   EmailEvent                  → Story 6.1
-//   AlertRule / AlertEvent      → Stories 8.1–8.3
-//   UserAppAssignment / Setting → Stories 1.6 / 4.10
+//   App                                      → Story 2.1
+//   Connector / ConnectorCredential          → Stories 2.4–2.5
+//   WebhookEventRaw                          → Story 2.13
+//   HealthCheckResult                        → Story 2.12
+//   MetricSnapshot / Hourly / Daily          → Stories 3.1–3.4
+//   CostRecord / FxRate                      → Stories 4.1–4.2
+//   ActivityEvent / IntegrationCallEvent /
+//     CustomMetricEvent                      → Story 5.1
+//   ResourceSnapshot                         → Story 3.x
+//   EmailEvent                               → Story 6.1
+//   AlertRule / AlertEvent                   → Stories 8.1–8.3
+//   UserAppAssignment / Setting              → Stories 1.6 / 4.10
 
 generator client {
   provider = "prisma-client-js"

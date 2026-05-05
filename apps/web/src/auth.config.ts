@@ -31,17 +31,24 @@ export const authConfig: NextAuthConfig = {
     },
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = (user as { role?: string }).role;
+        // user.id can be undefined when the user has just been deleted; keep
+        // the existing token if so. user.role comes from our augmentation.
+        if (user.id) token.id = user.id;
+        if (user.role) token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user && token.id) {
-        session.user.id = token.id as string;
-        (session.user as { role?: string }).role = token.role as
-          | string
-          | undefined;
+      if (session.user) {
+        // token.id / token.role are typed as `unknown` on @auth/core's JWT
+        // (the interface is open-ended); narrow with typeof checks before
+        // assigning into our augmented Session.user shape.
+        if (typeof token.id === "string") {
+          session.user.id = token.id;
+        }
+        if (typeof token.role === "string") {
+          session.user.role = token.role;
+        }
       }
       return session;
     },

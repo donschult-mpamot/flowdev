@@ -1,12 +1,17 @@
 import { cn } from "@flowdev/shared";
-import { auth } from "@/auth";
+import { auth, signOut } from "@/auth";
 
 // Story 1.2 minimum-viable protected destination. Story 1.4 replaces this
 // with the FlowDesk shell.
 export default async function PortfolioPage() {
   const session = await auth();
   const email = session?.user?.email ?? "(unknown)";
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "(none)";
+  const role = session?.user?.role ?? "(none)";
+
+  async function signOutAction(): Promise<void> {
+    "use server";
+    await signOut({ redirectTo: "/sign-in" });
+  }
 
   return (
     <main
@@ -28,7 +33,7 @@ export default async function PortfolioPage() {
       <p className="max-w-md text-center text-xs opacity-50">
         Story 1.2 placeholder. Story 1.4 replaces this with the FlowDesk shell.
       </p>
-      <form action="/api/auth/signout" method="POST">
+      <form action={signOutAction}>
         <button
           type="submit"
           className={cn(
