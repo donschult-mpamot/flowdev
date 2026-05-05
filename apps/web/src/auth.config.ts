@@ -1,21 +1,38 @@
 import type { NextAuthConfig } from "next-auth";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 
+type Provider = NonNullable<NextAuthConfig["providers"]>[number];
+
 // Edge-safe config consumed by middleware. Must NOT import @flowdev/db,
 // bcryptjs, or anything that pulls Node-only modules — middleware runs in the
 // Edge runtime. The Credentials provider lives in auth.ts (Node runtime).
 
-export const authConfig: NextAuthConfig = {
-  pages: { signIn: "/sign-in" },
-  providers: [
+// Only register the Microsoft Entra ID provider when all three env vars are
+// populated. Auth.js v5 validates every configured provider at request time,
+// so leaving this provider in the list with empty-string credentials breaks
+// the credentials sign-in path too (Configuration error). This is the runtime
+// surface of deferred item D-1.2.2 — supersedes its earlier "click-to-500"
+// description because the failure mode actually blocks all of /api/auth.
+export const microsoftEntraEnabled =
+  Boolean(process.env.AZURE_AD_CLIENT_ID) &&
+  Boolean(process.env.AZURE_AD_CLIENT_SECRET) &&
+  Boolean(process.env.AZURE_AD_TENANT_ID);
+
+const providers: Provider[] = [];
+
+if (microsoftEntraEnabled) {
+  providers.push(
     MicrosoftEntraID({
       clientId: process.env.AZURE_AD_CLIENT_ID,
       clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
-      issuer: process.env.AZURE_AD_TENANT_ID
-        ? `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/v2.0`
-        : undefined,
+      issuer: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/v2.0`,
     }),
-  ],
+  );
+}
+
+export const authConfig: NextAuthConfig = {
+  pages: { signIn: "/sign-in" },
+  providers,
   session: { strategy: "jwt" },
   callbacks: {
     authorized({ auth, request }) {

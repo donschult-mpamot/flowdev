@@ -1,5 +1,6 @@
 import { cn } from "@flowdev/shared";
 import { credentialsEnabled } from "@/auth";
+import { microsoftEntraEnabled } from "@/auth.config";
 import {
   signInWithCredentialsAction,
   signInWithMicrosoftEntraAction,
@@ -64,26 +65,30 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           </div>
         ) : null}
 
-        <form action={signInWithMicrosoftEntraAction} className="space-y-2">
-          <input type="hidden" name="callbackUrl" value={callbackUrl} />
-          <button
-            type="submit"
-            className={cn(
-              "w-full rounded-md bg-[var(--color-brand-purple)] px-4 py-2",
-              "text-sm font-medium text-white transition hover:opacity-90",
-            )}
-          >
-            Sign in with Microsoft
-          </button>
-        </form>
+        {microsoftEntraEnabled ? (
+          <form action={signInWithMicrosoftEntraAction} className="space-y-2">
+            <input type="hidden" name="callbackUrl" value={callbackUrl} />
+            <button
+              type="submit"
+              className={cn(
+                "w-full rounded-md bg-[var(--color-brand-purple)] px-4 py-2",
+                "text-sm font-medium text-white transition hover:opacity-90",
+              )}
+            >
+              Sign in with Microsoft
+            </button>
+          </form>
+        ) : null}
 
         {credentialsEnabled ? (
           <>
-            <div className="flex items-center gap-3 text-xs opacity-60">
-              <span className="h-px flex-1 bg-current" />
-              <span>or</span>
-              <span className="h-px flex-1 bg-current" />
-            </div>
+            {microsoftEntraEnabled ? (
+              <div className="flex items-center gap-3 text-xs opacity-60">
+                <span className="h-px flex-1 bg-current" />
+                <span>or</span>
+                <span className="h-px flex-1 bg-current" />
+              </div>
+            ) : null}
 
             <form action={signInWithCredentialsAction} className="space-y-3">
               <input type="hidden" name="callbackUrl" value={callbackUrl} />
