@@ -3,7 +3,7 @@
 **Project:** FlowDev (codename **MPAMOT** — Multi-Platform Application Monitoring & Operations Tool)
 **Owner:** Don
 **Methodology:** BMAD (Phase-driven planning → implementation)
-**Last updated:** 2026-04-30 EOD (Stories 1.1 + 1.7 merged; ready to start Story 1.2 tomorrow)
+**Last updated:** 2026-05-05 (Story 1.2 draft PR #3 opened — code-complete-with-stubs; awaiting Azure tenant creds from Don before live SSO smoke + ready-for-review)
 
 > Single source of truth for project status across Claude Code sessions. Read this first when resuming work in a new session, then act on the **Next step** in §Current state.
 
@@ -11,12 +11,22 @@
 
 ## Current state
 
-**Phase:** 4 — Implementation, **Stories 1.1 + 1.7 status `done`** — both merged to `main`.
+**Phase:** 4 — Implementation. Stories 1.1 + 1.7 merged to `main`; **Story 1.2 in `review` (draft PR #3)** awaiting credential-bound live SSO smoke before merge.
+
+**🟡 PR #3 (Story 1.2):** <https://github.com/donschult-mpamot/flowdev/pull/3> — DRAFT, opened 2026-05-05
+- Branch: `feat/story-1-2-auth` (pushed; tracking origin)
+- Status: code-complete-with-stubs. CI green expected (build/typecheck/lint/test pass locally with placeholder AUTH_SECRET; sso-live test skips because AZURE_AD_* are unset on purpose).
+- **Blocked on:** Don supplying real `AZURE_AD_TENANT_ID` / `AZURE_AD_CLIENT_ID` / `AZURE_AD_CLIENT_SECRET` from an Azure Entra app registration, then running the manual dev-server smoke + live SSO smoke per the PR's test plan.
+- Substantive carry-forward: `apps/web/tsconfig.json` set `declaration: false` + explicit `baseUrl: "."` (Auth.js v5 + strict-TS workaround; documented in Review Findings R1/R2); `authorizeCredentials` lives in `auth.credentials.ts` not `auth.ts` so vitest can exercise it without pulling NextAuth's `next/server` import (R3); audit-op closed-set extended with `auth.signin.success` / `auth.signin.failure` / `auth.session.create`; sign-in + sign-out wired via Server Actions calling `signIn()` / `signOut()` from `@/auth` (P1+P2 CR patches — direct POSTs to `/api/auth/*` would have failed on Auth.js v5's CSRF check); module augmentation in `apps/web/src/types/next-auth.d.ts` extends `Session.user` with `id?` + `role?` and JWT in both `next-auth/jwt` and `@auth/core/jwt` modules so consumer code stays cast-free; same-LLM CR caveat carried forward (Opus 4.7 implementation + review under autonomous-loop authorisation).
+
+**✅ PR #1 (Story 1.1):** <https://github.com/donschult-mpamot/flowdev/pull/1> — MERGED 2026-04-30 07:26Z
 
 **✅ PR #1 (Story 1.1):** <https://github.com/donschult-mpamot/flowdev/pull/1> — MERGED 2026-04-30 07:26Z
 - Squash commit on `main`: `80dd6b9` — `feat(story-1.1): bootstrap monorepo, Postgres, Prisma, and base infrastructure (#1)`
 - Branch `feat/story-1-1-bootstrap` deleted (local + remote).
 - CR (bmad-code-review) ran 2026-04-30 against the original scaffold; 11 patches applied + 8 deferred (see `_bmad-output/implementation-artifacts/deferred-work.md`); CI green on the merged commit.
+
+> **Autonomous-loop note (2026-05-05):** Don authorised a "yolo" run of forward stories with the explicit trade-off of code-complete-with-stubs at every credential-bound boundary. The loop pauses at PR #3 for Don's Azure tenant config; pure-code stories (1.3 server-side RBAC, 1.4 FlowDesk shell, 1.5/1.6 user mgmt CRUD without external integrations, 1.8 audit search UI) can continue in parallel sessions while Don provisions the tenant.
 
 **✅ PR #2 (Story 1.7):** <https://github.com/donschult-mpamot/flowdev/pull/2> — MERGED 2026-04-30
 - Squash commit on `main`: `d4dd30b` — `Story 1.7: Persist immutable audit log infrastructure (#2)`
