@@ -1,9 +1,11 @@
 // FlowDev Prisma schema
 //
 // Story 1.7 (2026-04-30) added AuditLog — the first real model — and flipped
-// the project from `prisma db push` to `prisma migrate dev/deploy`. Subsequent
-// stories add models incrementally:
-//   User / Account / Session   → Story 1.2 (@auth/prisma-adapter)
+// the project from `prisma db push` to `prisma migrate dev/deploy`.
+// Story 1.2 (2026-05-05) added Auth.js v5 models (User/Account/Session/
+// VerificationToken) plus the FlowDev User extensions (passwordHash, status,
+// role, removedAt) and the Role + UserStatus enums.
+// Subsequent stories add models incrementally:
 //   App                         → Story 2.1
 //   Connector / ConnectorCredential → Stories 2.4–2.5
 //   WebhookEventRaw             → Story 2.13
@@ -23,6 +25,91 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// FlowDev RBAC roles (FR64). VIEWER is deferred to v2.
+enum Role {
+  ADMIN
+  MANAGER
+  DEVELOPER
+}
+
+// User lifecycle. Default INVITED; flips to ACTIVE on first successful sign-in
+// (Story 1.5 wires the transition). REMOVED is a soft-delete sentinel set when
+// ADMIN removes a user — the row is retained so historical audit log foreign
+// references still resolve.
+enum UserStatus {
+  INVITED
+  ACTIVE
+  REMOVED
+}
+
+// Auth.js v5 + FlowDev User. Auth.js's @auth/prisma-adapter requires the
+// id/email/emailVerified/image columns and the accounts/sessions relations.
+// FlowDev extends with passwordHash (credentials fallback only — null for
+// SSO-only users), status, role, and removedAt.
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+
+  passwordHash  String?
+  status        UserStatus @default(INVITED)
+  role          Role       @default(DEVELOPER)
+  removedAt     DateTime?
+
+  accounts      Account[]
+  sessions      Session[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([role])
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
 }
 
 // Append-only audit trail (FR67, NFR-S6).

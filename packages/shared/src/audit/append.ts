@@ -1,8 +1,11 @@
 import { Prisma, type PrismaClient } from "@flowdev/db";
 
 // Closed set of audit operation strings. Extended per-story as new mutations
-// land (e.g., Story 1.5 adds "user.invite", Story 2.5 adds "credential.decrypt").
+// land (e.g., Story 1.2 adds the auth.* ops, Story 2.5 adds "credential.decrypt").
 export type AuditOp =
+  | "auth.signin.success"
+  | "auth.signin.failure"
+  | "auth.session.create"
   | "app.create"
   | "app.update"
   | "app.decommission"

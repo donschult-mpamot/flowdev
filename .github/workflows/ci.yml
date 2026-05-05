@@ -42,6 +42,14 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://flowdev:flowdev@localhost:5433/flowdev?schema=public
+      # Story 1.2 — Auth.js v5 needs AUTH_SECRET (>= 32 chars) at build/test
+      # time. Real AZURE_AD_* values are deliberately left unset so the
+      # sso-live.integration.test skip path runs in CI; staging populates
+      # them and verifies live OIDC before merge.
+      AUTH_SECRET: ci-placeholder-secret-not-real-do-not-use-anywhere-else
+      CREDENTIALS_FALLBACK_ENABLED: "true"
+      DEV_ADMIN_EMAIL: ci-admin@flowdev.local
+      DEV_ADMIN_PASSWORD: ci-placeholder-password-not-real
 
     steps:
       - name: Checkout
