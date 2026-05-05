@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 3000",
+    "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
@@ -11,14 +11,19 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.1",
     "@flowdev/db": "*",
     "@flowdev/shared": "*",
+    "bcryptjs": "^2.4.3",
     "next": "^15.5.12",
+    "next-auth": "5.0.0-beta.30",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

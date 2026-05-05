@@ -3,7 +3,7 @@
 **Project:** FlowDev (codename **MPAMOT** — Multi-Platform Application Monitoring & Operations Tool)
 **Owner:** Don
 **Methodology:** BMAD (Phase-driven planning → implementation)
-**Last updated:** 2026-04-30 EOD (Stories 1.1 + 1.7 merged; ready to start Story 1.2 tomorrow)
+**Last updated:** 2026-05-05 EOD (Story 1.2 draft PR #3 + 2 post-CR fixes pushed; credentials sign-in still throws an Auth.js Configuration error in Don's local dev — to triage tomorrow before any further forward progress)
 
 > Single source of truth for project status across Claude Code sessions. Read this first when resuming work in a new session, then act on the **Next step** in §Current state.
 
@@ -11,12 +11,26 @@
 
 ## Current state
 
-**Phase:** 4 — Implementation, **Stories 1.1 + 1.7 status `done`** — both merged to `main`.
+**Phase:** 4 — Implementation. Stories 1.1 + 1.7 merged to `main`; **Story 1.2 in `review` (draft PR #3)** awaiting credential-bound live SSO smoke before merge.
+
+**🟡 PR #3 (Story 1.2):** <https://github.com/donschult-mpamot/flowdev/pull/3> — DRAFT, opened 2026-05-05
+- Branch: `feat/story-1-2-auth` (pushed; tracking origin)
+- Commits on the branch (newest first):
+  - `aa7b65b` `fix(auth): conditionally register MicrosoftEntraID — empty creds blocked credentials sign-in` *(2026-05-05 EOD)*
+  - `6d5802d` `fix(web): drop --turbopack from dev script to keep .js->.ts resolution` *(2026-05-05 EOD)*
+  - `e6c1185` `docs: progress update — Story 1.2 draft PR #3 opened, awaiting Azure creds`
+  - `4ddca6f` `Story 1.2 [CR]: same-session adversarial review`
+  - `b616780` `Story 1.2: Authenticate via Azure Entra ID SSO with credentials fallback`
+- Status: code-complete-with-stubs PLUS two post-CR fixes (see "Today's gotchas" below for the underlying bugs). 4 gates green locally on every push; CI green on every push. **BUT credentials sign-in still produces `{"message":"There was a problem with the server configuration..."}` in Don's local dev as of 2026-05-05 EOD — root cause unknown, see "Known issues at EOD" below.**
+- **Blocked on:** (a) resolving the local credentials sign-in failure ⬅ **next session's first task**, then (b) Don supplying real `AZURE_AD_TENANT_ID` / `AZURE_AD_CLIENT_ID` / `AZURE_AD_CLIENT_SECRET` from an Azure Entra app registration, then (c) running the manual dev-server smoke + live SSO smoke per the PR's test plan.
+- Substantive carry-forward: `apps/web/tsconfig.json` set `declaration: false` + explicit `baseUrl: "."` (Auth.js v5 + strict-TS workaround; documented in Review Findings R1/R2); `authorizeCredentials` lives in `auth.credentials.ts` not `auth.ts` so vitest can exercise it without pulling NextAuth's `next/server` import (R3); audit-op closed-set extended with `auth.signin.success` / `auth.signin.failure` / `auth.session.create`; sign-in + sign-out wired via Server Actions calling `signIn()` / `signOut()` from `@/auth` (P1+P2 CR patches — direct POSTs to `/api/auth/*` would have failed on Auth.js v5's CSRF check); module augmentation in `apps/web/src/types/next-auth.d.ts` extends `Session.user` with `id?` + `role?` and JWT in both `next-auth/jwt` and `@auth/core/jwt` modules so consumer code stays cast-free; **dev script no longer uses `--turbopack`** (Turbopack ignores webpack's `extensionAlias` config in `next.config.ts`, so `.js` import specifiers in workspace sources fail to resolve — see Today's gotchas); **MicrosoftEntraID provider is now gated on all three `AZURE_AD_*` env vars being populated** (Auth.js v5 validates every configured provider at request time; an empty-string clientId raises a Configuration error that takes down the credentials path too — runtime surface of deferred item D-1.2.2, supersedes the earlier "click-to-500" description); same-LLM CR caveat carried forward (Opus 4.7 implementation + review under autonomous-loop authorisation).
 
 **✅ PR #1 (Story 1.1):** <https://github.com/donschult-mpamot/flowdev/pull/1> — MERGED 2026-04-30 07:26Z
 - Squash commit on `main`: `80dd6b9` — `feat(story-1.1): bootstrap monorepo, Postgres, Prisma, and base infrastructure (#1)`
 - Branch `feat/story-1-1-bootstrap` deleted (local + remote).
 - CR (bmad-code-review) ran 2026-04-30 against the original scaffold; 11 patches applied + 8 deferred (see `_bmad-output/implementation-artifacts/deferred-work.md`); CI green on the merged commit.
+
+> **Autonomous-loop note (2026-05-05):** Don authorised a "yolo" run of forward stories with the explicit trade-off of code-complete-with-stubs at every credential-bound boundary. The loop pauses at PR #3 for Don's Azure tenant config; pure-code stories (1.3 server-side RBAC, 1.4 FlowDesk shell, 1.5/1.6 user mgmt CRUD without external integrations, 1.8 audit search UI) can continue in parallel sessions while Don provisions the tenant.
 
 **✅ PR #2 (Story 1.7):** <https://github.com/donschult-mpamot/flowdev/pull/2> — MERGED 2026-04-30
 - Squash commit on `main`: `d4dd30b` — `Story 1.7: Persist immutable audit log infrastructure (#2)`
@@ -29,66 +43,63 @@
 **Pre-flight (do these before opening Claude Code):**
 
 ```bash
-# 1. Make sure local main is in sync with origin (Phase 4 always works off main).
+# 1. Sync the working branch with origin (we are NOT on main — Story 1.2's PR
+#    is still open). The two post-CR fixes from 2026-05-05 EOD live here.
 cd C:/Dev/flowdev
-git checkout main
-git pull origin main
-git status                                   # expect clean tree (.claude/ untracked is fine)
+git checkout feat/story-1-2-auth
+git pull origin feat/story-1-2-auth
+git log --oneline -5                              # expect aa7b65b at the top
 
-# 2. Start Docker Desktop. (No CLI for this — open the app, wait until it shows
-#    "Engine running". Without it, Story 1.2's tests will skip and dev iterations
-#    will hit ECONNREFUSED on Postgres.)
-
-# 3. Bring up flowdev-postgres on host port 5433 (NOT 5432 — see §Today's gotchas).
+# 2. Start Docker Desktop, then verify Postgres is healthy on 5433.
 npm run db:up
-docker ps --filter name=flowdev-postgres     # expect (healthy)
+docker ps --filter name=flowdev-postgres          # expect (healthy)
 
-# 4. Verify the post-1.7 baseline is intact.
+# 3. Verify the seeded admin user is still in the DB (it should be — the 1.2
+#    migration only ADDED tables, didn't reset). If missing, re-seed:
+docker exec flowdev-postgres psql -U flowdev -d flowdev \
+  -c "SELECT email, role, status FROM users;"
+# If empty:
+DEV_ADMIN_EMAIL='admin@flowdev.local' DEV_ADMIN_PASSWORD='change-me-in-real-life-99' \
+  npm run db:seed
+
+# 4. Confirm 4 gates still green on the latest commit.
 npm run build && npm run typecheck && npm run lint
 DATABASE_URL='postgresql://flowdev:flowdev@localhost:5433/flowdev?schema=public' \
-  npm run test                               # expect ~20 tests across 6 workspaces
-
-# 5. (Optional) push this APP-PROGRESS.md update if you haven't yet.
-git status                                   # if APP-PROGRESS.md shows as modified/committed-but-unpushed,
-git push origin main                         # push it now
+  AUTH_SECRET='ci-placeholder-secret-not-real-do-not-use-anywhere-else' \
+  CREDENTIALS_FALLBACK_ENABLED='true' \
+  npm run test                                    # expect 33 tests + 1 todo
 ```
 
-**Then — open a fresh Claude Code session (Opus 4.7 1M is fine; cross-LLM only matters for `[CR]` later):**
+**Then — open a fresh Claude Code session and paste this prompt verbatim:**
 
-**`[CS]` Story 1.2 — paste this prompt verbatim:**
+> Read APP-PROGRESS.md (specifically §Known issues at EOD 2026-05-05). Story 1.2 PR #3 is open; the credentials sign-in path still produces `{"message":"There was a problem with the server configuration..."}` in Don's local dev despite two post-CR fixes (turbopack removed, MicrosoftEntraID conditionally registered). Triage from the hypothesis list in §Known issues. Don't progress to Story 1.3 until credentials sign-in lands on `/portfolio` and produces the expected `auth.signin.success` + `auth.session.create` audit rows. Once that's verified, the autonomous yolo loop resumes per Don's existing authorisation: code-complete-with-stubs at credential-bound boundaries, same-session CR caveat accepted, stack PRs from `feat/story-1-2-auth` until PR #3 merges.
 
-> Read APP-PROGRESS.md, then run /bmad-create-story for Story 1.2 (slug: 1-2-authenticate-via-azure-entra-id-sso-with-credentials-fallback). This is the next forward story per APP-PROGRESS.md "Resume tomorrow" sequence. Auth.js v5 with Azure Entra ID SSO + credentials fallback per FR61, FR62. Story 1.7's `appendAudit()` helper from `@flowdev/shared` is now available; the spec should plan auth-event audit log calls (sign-in success/failure, session creation) using it.
+That session debugs the credentials flow first, **then** decides whether to merge PR #3 + start Story 1.3 fresh from `main`, or stack 1.3 on the existing branch.
 
-That session writes the spec, syncs sprint-status, and commits the story file. Then **end that session**.
+**Forward sequence after 1.2 is verified + merged:** 1.3 (server-side RBAC) → 1.4 (FlowDesk shell) → 1.5/1.6 (user mgmt — can finally call `appendAudit({op: "user.invite", ...})` etc. since 1.7 shipped) → 1.8 (audit search/filter UI) → Epic 2 (Connector Framework, sequenced first per PM).
 
-**`[DS]` Story 1.2 — fresh session, paste this prompt:**
+### Known issues at EOD 2026-05-05 (start tomorrow's session here)
 
-> Run /bmad-dev-story for Story 1.2 in this repo.
->
-> Context:
-> - Repo: C:\Dev\flowdev (already cwd'd here, on `main`, clean tree)
-> - Story spec: _bmad-output/implementation-artifacts/1-2-authenticate-via-azure-entra-id-sso-with-credentials-fallback.md (read it fully; decisions pre-resolved at top; tasks/subtasks are the work breakdown)
-> - Sprint tracker: _bmad-output/implementation-artifacts/sprint-status.yaml (currently ready-for-dev; flip to in-progress on start, review on completion)
-> - Base branch: main (clean; PRs #1 and #2 merged at `80dd6b9` and `d4dd30b`)
-> - New branch: cut feat/story-1-2-auth from main before any edits
-> - Stories 1.1 + 1.7 patches in force — preserve all of: dist-as-types tsconfig, root eslint.config.mjs (now with `no-restricted-syntax` for audit_logs), CI Build-before-Typecheck-before-Test, host port 5433 for flowdev-postgres, `@flowdev/db` re-exports `Prisma`/`PrismaClient`, `appendAudit()` from `@flowdev/shared` is the only auth-log writer.
-> - Local Postgres: `npm run db:up` (flowdev-postgres on 127.0.0.1:5433); test runs need DATABASE_URL exported.
-> - gh CLI: "/c/Program Files/GitHub CLI/gh.exe" (authed as donschult-mpamot)
->
-> Constraints to keep top of mind:
-> - Package manager is npm (not pnpm)
-> - All Docker resources keep the flowdev- prefix
-> - @flowdev/* scope; MPAMOT only in GH org name + internal docs
-> - FlowDev tech stack must conform to FlowDesk's; flag any deviation
-> - Auth.js v5 (`next-auth@^5.0.0-beta.30`); `@auth/prisma-adapter@^2.11.1`; `@azure/msal-node@^5.0.6` per tech-stack §4
->
-> When done: 4 gates green locally, status → review, sprint-status synced, File List populated, branch pushed, draft PR opened against main.
+**🔴 Credentials sign-in produces Auth.js Configuration error.**
 
-End that session when it's done.
-
-**`[CR]` Story 1.2 — fresh session, ideally a different LLM (Opus 4.6 or Sonnet 4.6) for cross-LLM blind spots.** Use the same prompt template you used for PR #2's CR, swap PR #2 → the new PR number, and the slug.
-
-**Then loop forward:** Story 1.3 (server-side RBAC), 1.4 (FlowDesk shell), 1.5/1.6 (user mgmt — these can finally call `appendAudit({op: "user.invite", ...})` etc. since 1.7 shipped), 1.8 (audit search/filter UI).
+- **Symptom (Don, 2026-05-05 EOD):** with the `feat/story-1-2-auth` branch pulled (commit `aa7b65b`), dev server running, `.env` populated (`AUTH_SECRET`, `DATABASE_URL`, `CREDENTIALS_FALLBACK_ENABLED=true`, `DEV_ADMIN_EMAIL`, `DEV_ADMIN_PASSWORD`, `AZURE_AD_*` left blank), navigating to `/portfolio` correctly redirects to `/sign-in`. Submitting the credentials form with the seeded admin (`admin@flowdev.local` / `change-me-in-real-life-99`) returns `{"message":"There was a problem with the server configuration. Check the server logs for more information."}` instead of redirecting to `/portfolio`.
+- **What's been ruled out today:**
+  - Turbopack vs webpack `.js` resolution — fixed in `6d5802d` (drop `--turbopack` from dev script). Confirmed `/sign-in` compiles + serves HTTP 200.
+  - MicrosoftEntraID provider registered with empty creds — fixed in `aa7b65b` (provider conditionally registered when all three `AZURE_AD_*` env vars are populated). Confirmed via `/api/auth/providers` returning 200 with only the credentials provider listed in a controlled non-Don dev shell on port 3088.
+- **Hypotheses to work through tomorrow, ordered by likelihood:**
+  1. **Don didn't actually pull `aa7b65b`.** Verify with `git log --oneline -5` — top commit must be `aa7b65b`. If not: `git pull origin feat/story-1-2-auth`, restart dev server.
+  2. **Stale Next.js build cache.** Delete `apps/web/.next` and `apps/web/node_modules/.cache`, restart dev server. Server-Action hashes are baked into compiled output; if the cache predates `aa7b65b` you'd still get the old behavior.
+  3. **`AUTH_SECRET` < 32 chars.** Auth.js v5 raises Configuration if too short. Verify `wc -c < .env | grep AUTH_SECRET` or just `echo $AUTH_SECRET | wc -c` — need ≥ 33 (32 chars + newline).
+  4. **`AUTH_TRUST_HOST` semantics in dev.** Auth.js v5 requires `AUTH_TRUST_HOST=true` when not on Vercel. Localhost is *usually* auto-trusted, but the Server Action call path may bypass that auto-trust. Try setting `AUTH_TRUST_HOST=true` in `.env` and restarting.
+  5. **PrismaAdapter init-time error.** Even with JWT session strategy, `PrismaAdapter(prisma)` is constructed at module load. If Prisma client init fails (DB unreachable, schema drift), Auth.js wraps it as a Configuration error. Verify `docker ps` shows postgres healthy + `npx prisma migrate status` from `packages/db/` is clean.
+  6. **`events.signIn` callback throws.** My `events.signIn` calls `appendAudit(prisma, ...)` twice. If the audit insert fails (DB issue, schema mismatch), Auth.js catches and surfaces a Configuration error. Wrap in try/catch (or just temporarily comment out) to isolate.
+  7. **Server Action is hitting a redirect-loop or Auth.js error route.** Check the **dev-server terminal output** (not the browser) when the form is submitted — Auth.js logs the actual error reason there with a `[auth][error]` prefix, even when the client gets the generic "Configuration" message.
+- **First diagnostic command tomorrow:**
+  ```bash
+  # In the dev-server terminal — clear it, then submit the form, then capture
+  # everything that prints. Paste it into the new session before any debugging.
+  ```
+  The server-side `[auth][error] <Reason>` line is the most direct path to root cause.
 
 ### Today's gotchas (capture so future-Don/future-Claude doesn't hit them cold)
 
@@ -98,6 +109,12 @@ End that session when it's done.
 - **`prisma migrate reset`** triggers a Prisma AI-safety guardrail when run by Claude Code. It needs `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` env var with the user's exact consent message. Not a problem for `migrate dev`/`migrate deploy`, only `reset`.
 - **Same-LLM CR caveat (Story 1.7).** PR #2's code review ran with Opus 4.7, the same model that wrote the implementation. Cross-LLM diversity benefit was lost. For Story 1.2 onward, if practical, run `[CR]` in a session with Opus 4.6 or Sonnet 4.6 — orthogonal blind spots. Documented in PR #2's Review Findings § header for traceability.
 - **Don't litter prod migrations with reset/destructive ops.** Story 1.7's migration uses `CREATE OR REPLACE TRIGGER` (PG14+) for idempotency. Future migrations should follow the same pattern so partial-apply recovery is clean.
+- **🆕 (Story 1.2) Turbopack ignores webpack hooks in `next.config.ts`.** The repo's `next.config.ts` configures `webpack(config) { config.resolve.extensionAlias = { ".js": [".js", ".ts", ".tsx"] } }` to map workspace `.js` import specifiers back to `.ts` source. Turbopack does not honour the `webpack()` hook and Next.js 15.5 has no Turbopack equivalent of `extensionAlias`. Result: `next dev --turbopack` fails to resolve `./audit/append.js` (or any other `.js`-extension import in `packages/shared/src/index.ts` / its descendants) on first import from a Server Component. Fix: `apps/web/package.json`'s `dev` script no longer uses `--turbopack` (commit `6d5802d`). Revisit when Turbopack ships extensionAlias support.
+- **🆕 (Story 1.2) Auth.js v5 validates ALL configured providers at request time, even unused ones.** Registering MicrosoftEntraID with `clientId: ""` (the .env default when AZURE_AD_* are blank) raises a Configuration error on every `/api/auth/*` request — including the credentials path. Fix pattern: only push the provider into the `providers` array when its full config is present (commit `aa7b65b`). Same idea applies to any future OAuth provider added to FlowDev.
+- **🆕 (Story 1.2) `@/*` alias needs explicit `baseUrl: "."` in workspace tsconfig.** With `tsconfig.base.json` at the repo root setting `baseUrl: "."`, child workspaces inherit `baseUrl` pointing at the repo root, not at the workspace dir. So `paths["@/*"]: ["./src/*"]` resolves to `<repo-root>/src/*`, not `apps/web/src/*`. `apps/web/tsconfig.json` therefore needs to override `baseUrl: "."` explicitly so the alias resolves correctly under the workspace.
+- **🆕 (Story 1.2) Auth.js v5 + strict TS + `declaration: true` is incompatible.** `NextAuth({...})`'s destructured exports (`auth`, `handlers`, `signIn`, `signOut`) cause TS error "inferred type cannot be named without a reference to an internal module" when emitted with declarations. `apps/web/tsconfig.json` overrides `declaration: false`. Workspace doesn't emit declarations anyway (`noEmit: true`), so this is a strictness escape hatch with no functional impact.
+- **🆕 (Story 1.2) `authorizeCredentials` MUST live outside `auth.ts`.** Importing `auth.ts` in vitest pulls NextAuth which imports `next/server` — Vitest's ESM resolver can't handle Next.js subpath exports and the test fails to load. Convention: keep `authorizeCredentials` (and `credentialsEnabled`) in `apps/web/src/auth.credentials.ts`; `auth.ts` re-exports them so the public surface from `@/auth` is unchanged.
+- **🆕 (Story 1.2) Server Actions for Auth.js, not direct form POSTs.** Direct `<form action="/api/auth/callback/credentials" method="POST">` fails Auth.js v5's CSRF check. Wrap signIn/signOut in Server Actions calling `signIn()` / `signOut()` from `@/auth` — the framework injects the CSRF token transparently. (Caught in same-session CR as P1+P2.)
 
 **Decisions locked (2026-04-28, Don):**
 - Repo location: stay in `C:\Dev\flowdev` (code coexists with `_bmad-output/`, `_bmad/`, `artifacts/`, this file).
